@@ -1,0 +1,98 @@
+@model HMS.Models.Shop.ShopSale
+@{
+    ViewData["Title"] = "Shop Sale Receipt";
+}
+
+<div class="d-print-none text-center mb-4">
+    <button onclick="window.print()" class="btn btn-primary d-inline-flex align-items-center">
+        <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+        Print Receipt
+    </button>
+    <a asp-action="Index" class="btn btn-secondary ms-2">POS Register</a>
+</div>
+
+<div class="receipt-container">
+    <div class="receipt-header">
+        <h5 class="fw-bold mb-0">AMTECH HMS</h5>
+        <span class="small d-block">RETAIL SHOP TICKET</span>
+        <span class="small text-muted">Tel: +254 700 000000</span>
+    </div>
+
+    <div class="receipt-row">
+        <span>Receipt No:</span>
+        <span class="fw-bold">#S-@Model.Id</span>
+    </div>
+    <div class="receipt-row">
+        <span>Date:</span>
+        <span>@Model.SaleTime.ToString("yyyy-MM-dd HH:mm")</span>
+    </div>
+    <div class="receipt-row mb-1">
+        <span>Cashier:</span>
+        <span>@Model.Cashier.FullName</span>
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <div class="fw-bold receipt-row mb-2">
+        <span>Item Description</span>
+        <span>Total</span>
+    </div>
+
+    @foreach (var item in Model.Items)
+    {
+        <div class="receipt-row">
+            <span>@item.Product.Name</span>
+            <span>Ksh @item.LineTotal.ToString("N0")</span>
+        </div>
+        <div class="receipt-row text-muted small" style="margin-top: -3px; font-size: 0.8rem;">
+            <span>@item.Quantity @(item.Quantity == 1 ? "unit" : "units") &times; Ksh @item.UnitPrice.ToString("N0")</span>
+        </div>
+    }
+
+    <div class="receipt-divider"></div>
+
+    <div class="receipt-row">
+        <span>Subtotal:</span>
+        <span>Ksh @Model.SubTotal.ToString("N2")</span>
+    </div>
+
+    @if (Model.Discount > 0)
+    {
+        <div class="receipt-row">
+            <span>Discount:</span>
+            <span>-Ksh @Model.Discount.ToString("N2")</span>
+        </div>
+    }
+
+    @if (Model.Tax > 0)
+    {
+        <div class="receipt-row">
+            <span>Tax:</span>
+            <span>+Ksh @Model.Tax.ToString("N2")</span>
+        </div>
+    }
+
+    <div class="receipt-divider"></div>
+
+    <div class="receipt-row fw-bold fs-6">
+        <span>TOTAL PAID</span>
+        <span>Ksh @Model.TotalAmount.ToString("N2")</span>
+    </div>
+
+    <div class="receipt-row">
+        <span>Amount Tenders (@Model.PaymentMethod)</span>
+        <span>Ksh @Model.AmountPaid.ToString("N2")</span>
+    </div>
+
+    <div class="receipt-row">
+        <span>Change Returned</span>
+        <span>Ksh @Model.ChangeAmount.ToString("N2")</span>
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <div class="text-center small mt-3">
+        <strong>Thank You for Shopping With Us!</strong><br />
+        <span>Please retain receipt for returns.</span>
+    </div>
+</div>

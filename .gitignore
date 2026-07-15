@@ -1,0 +1,121 @@
+﻿# =========================
+# Build directories
+# =========================
+bin/
+obj/
+
+# =========================
+# Visual Studio
+# =========================
+.vs/
+*.user
+*.userosscache
+*.suo
+*.rsuser
+*.sln.docstates
+
+# =========================
+# JetBrains Rider / IntelliJ
+# =========================
+.idea/
+*.iml
+
+# =========================
+# VS Code
+# =========================
+.vscode/
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# =========================
+# NuGet
+# =========================
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+
+# =========================
+# Publish output
+# =========================
+publish/
+Publish/
+artifacts/
+
+# =========================
+# Test Results
+# =========================
+TestResults/
+BenchmarkDotNet.Artifacts/
+
+# =========================
+# Entity Framework
+# =========================
+*.dbmdl
+
+# =========================
+# ASP.NET Core secrets
+# =========================
+secrets.json
+
+# Ignore local appsettings but keep templates
+appsettings.Development.json
+appsettings.Local.json
+
+# Uncomment if you don't want production settings in Git
+# appsettings.json
+
+# =========================
+# Azure
+# =========================
+.publishsettings
+*.azurePubxml
+
+# =========================
+# Visual Studio publish profiles
+# =========================
+*.pubxml
+!Properties/PublishProfiles/*.pubxml
+
+# =========================
+# Dotnet watch
+# =========================
+.dotnet/
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
+*.cache
+
+# =========================
+# Node (if added later)
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# Coverage
+# =========================
+coverage/
+*.coverage
+*.coveragexml
+
+# =========================
+# Generated files
+# =========================
+Generated/

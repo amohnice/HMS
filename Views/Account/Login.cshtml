@@ -1,0 +1,306 @@
+@{
+    ViewData["Title"] = "Login";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - HMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+        }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        body {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+        }
+        /* Left panel */
+        .login-brand {
+            background: linear-gradient(145deg, #0f172a 0%, #1e293b 46%, #312e81 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 60px 48px;
+            position: relative;
+            overflow: hidden;
+            min-height: 100vh;
+        }
+        .login-brand::before {
+            content: '';
+            position: absolute;
+            top: -80px; right: -80px;
+            width: 280px; height: 280px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 50%;
+        }
+        .login-brand::after {
+            content: '';
+            position: absolute;
+            bottom: -60px; left: -60px;
+            width: 200px; height: 200px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 50%;
+        }
+        .brand-logo {
+            width: 72px; height: 72px;
+            background: rgba(255,255,255,0.10);
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255,255,255,0.14);
+            backdrop-filter: blur(8px);
+        }
+        .brand-logo svg { color: white; }
+        .brand-name {
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: white;
+            letter-spacing: -0.8px;
+            margin-bottom: 10px;
+        }
+        .brand-tagline {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.55);
+            font-weight: 400;
+            max-width: 280px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+        .brand-features {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            align-items: flex-start;
+            width: 100%;
+            max-width: 280px;
+        }
+        .brand-feature {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .brand-feature-dot {
+            width: 8px; height: 8px;
+            background: rgba(129, 140, 248, 0.95);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Right panel */
+        .login-form-panel {
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px;
+            min-height: 100vh;
+        }
+        .login-form-box {
+            width: 100%;
+            max-width: 380px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 32px 28px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+        }
+        .login-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
+            letter-spacing: -0.4px;
+        }
+        .login-subtitle {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 32px;
+        }
+        .form-group { margin-bottom: 18px; }
+        label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 6px;
+            letter-spacing: 0.2px;
+        }
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            color: #0f172a;
+            background: #f8fafc;
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+            outline: none;
+        }
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            border-color: #64748b;
+            background: #fff;
+            box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.12);
+        }
+        .remember-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .remember-row input[type="checkbox"] {
+            width: 16px; height: 16px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+        .remember-row label {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #475569;
+            cursor: pointer;
+        }
+        .btn-login {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.2px;
+        }
+        .btn-login:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+        }
+        .btn-login:active { transform: translateY(0); }
+
+        .error-banner {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .login-hint {
+            margin-top: 28px;
+            padding: 14px 16px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.78rem;
+            color: #64748b;
+            line-height: 1.7;
+        }
+        .login-hint strong { color: #475569; }
+
+        /* Mobile */
+        @@media (max-width: 768px) {
+            html, body { overflow: auto; }
+            body { grid-template-columns: 1fr; min-height: 100vh; }
+            .login-brand { display: none; }
+            .login-form-panel { background: #f1f5f9; min-height: 100vh; }
+            .login-form-box {
+                padding: 28px 24px;
+                border-radius: 14px;
+                box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Left: Branding -->
+    <div class="login-brand">
+        <div class="brand-logo">
+            <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+        </div>
+        <div class="brand-name">HMS</div>
+        <p class="brand-tagline">Hotel Management System for AMTECH — your all-in-one operations hub.</p>
+        <div class="brand-features">
+            <div class="brand-feature"><div class="brand-feature-dot"></div>Restaurant & Kitchen POS</div>
+            <div class="brand-feature"><div class="brand-feature-dot"></div>Shop & Inventory</div>
+            <div class="brand-feature"><div class="brand-feature-dot"></div>Real-time Order Tracking</div>
+            <div class="brand-feature"><div class="brand-feature-dot"></div>Reports & Revenue Analytics</div>
+        </div>
+    </div>
+
+    <!-- Right: Login Form -->
+    <div class="login-form-panel">
+        <div class="login-form-box">
+            <div class="login-title">Welcome back</div>
+            <p class="login-subtitle">Sign in to your HMS account</p>
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="error-banner">
+                    <svg class="error-banner-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    @TempData["ErrorMessage"]
+                </div>
+            }
+
+            <form method="post" id="loginForm">
+                @Html.AntiForgeryToken()
+                <div class="form-group">
+                    <label for="email">Email address</label>
+                    <input type="email" name="email" id="email" required autocomplete="username" placeholder="you@hms.local" />
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" name="password" id="password" required autocomplete="current-password" placeholder="••••••••" />
+                </div>
+                <div class="remember-row">
+                    <input type="checkbox" name="rememberMe" id="rememberMe" />
+                    <label for="rememberMe">Keep me signed in</label>
+                </div>
+                <button type="submit" class="btn-login" id="loginBtn">Sign in</button>
+            </form>
+
+            <div class="login-hint">
+                <strong>Demo accounts</strong> (password: <strong>Password123!</strong>)<br />
+                admin@hms.local &nbsp;·&nbsp; waiter@hms.local<br />
+                kitchen@hms.local &nbsp;·&nbsp; cashier@hms.local &nbsp;·&nbsp; shop@hms.local
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Show loading state on submit
+        document.getElementById('loginForm').addEventListener('submit', function () {
+            const btn = document.getElementById('loginBtn');
+            btn.textContent = 'Signing in…';
+            btn.style.opacity = '0.75';
+            btn.disabled = true;
+        });
+    </script>
+</body>
+</html>

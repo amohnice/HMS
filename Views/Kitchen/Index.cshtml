@@ -1,0 +1,136 @@
+@model IEnumerable<HMS.Models.Restaurant.RestaurantOrder>
+@using HMS.Models
+@{
+    ViewData["Title"] = "Kitchen Screen";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-0 fw-bold">Kitchen Orders</h1>
+        <p class="text-muted mb-0">Track preparation stages and coordinate food pick-ups</p>
+    </div>
+    <div class="d-flex align-items-center">
+        <span class="spinner-grow spinner-grow-sm text-danger me-2" role="status"></span>
+        <span class="text-muted small fw-bold">Live Monitor Active</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-3" onclick="location.reload()">
+            <svg class="me-1" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 16H18"></path></svg>
+            Refresh
+        </button>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card border-0 py-5 text-center shadow-sm">
+        <div class="card-body">
+            <svg class="text-muted mb-3" width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+            <h4 class="fw-bold">No active orders!</h4>
+            <p class="text-muted">The kitchen is fully caught up. When waiters take new orders, they'll appear here.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        @foreach (var order in Model)
+        {
+            var isPreparing = order.Status == RestaurantOrderStatus.Preparing;
+            var isReady = order.Status == RestaurantOrderStatus.Ready;
+            var isServed = order.Status == RestaurantOrderStatus.Served;
+
+            var cardBorderClass = order.Status switch
+            {
+                RestaurantOrderStatus.Pending => "border-warning",
+                RestaurantOrderStatus.Preparing => "border-info",
+                RestaurantOrderStatus.Ready => "border-success",
+                RestaurantOrderStatus.Served => "border-primary",
+                _ => ""
+            };
+
+            var headerBgClass = order.Status switch
+            {
+                RestaurantOrderStatus.Pending => "bg-warning bg-opacity-10",
+                RestaurantOrderStatus.Preparing => "bg-info bg-opacity-10",
+                RestaurantOrderStatus.Ready => "bg-success bg-opacity-10",
+                RestaurantOrderStatus.Served => "bg-primary bg-opacity-10",
+                _ => ""
+            };
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-2 @cardBorderClass">
+                    <!-- Card Header -->
+                    <div class="card-header @headerBgClass d-flex justify-content-between align-items-center py-2 px-3">
+                        <div>
+                            <span class="fw-bold fs-5">#@order.Id</span>
+                            <span class="badge bg-secondary ms-2">Table @order.Table.TableNumber</span>
+                        </div>
+                        <span class="text-muted small">@((DateTime.Now - order.OrderTime).Minutes)m ago</span>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="card-body p-3 d-flex flex-column justify-content-between">
+                        <div>
+                            <!-- Waiter & Customer Info -->
+                            <div class="d-flex justify-content-between mb-3 small text-muted">
+                                <span>Waiter: <strong>@order.Waiter.FullName</strong></span>
+                                <span>Cust: <strong>@(string.IsNullOrWhiteSpace(order.CustomerName) ? "Guest" : order.CustomerName)</strong></span>
+                            </div>
+
+                            <!-- Item List -->
+                            <div class="border-top border-bottom py-2 my-2">
+                                <ul class="list-unstyled mb-0">
+                                    @foreach (var item in order.Items)
+                                    {
+                                        <li class="d-flex justify-content-between mb-2">
+                                            <span>
+                                                <strong class="fs-5 text-primary me-2">@item.Quantity&times;</strong>
+                                                <span class="fw-semibold">@item.MenuItem.Name</span>
+                                            </span>
+                                            <span class="text-muted small">@item.MenuItem.Category</span>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+
+                            <!-- Chef Notes -->
+                            @if (!string.IsNullOrWhiteSpace(order.Notes))
+                            {
+                                <div class="bg-light p-2 rounded mb-3 small border-start border-3 border-danger">
+                                    <strong>Chef Notes:</strong> <span class="fst-italic">@order.Notes</span>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Action Transitions -->
+                        <div class="mt-4 pt-2 border-top">
+                            <form asp-action="UpdateStatus" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@order.Id" />
+                                
+                                @if (order.Status == RestaurantOrderStatus.Pending)
+                                {
+                                    <input type="hidden" name="status" value="@RestaurantOrderStatus.Preparing" />
+                                    <button type="submit" class="btn btn-warning w-100 fw-bold py-2">Start Preparing</button>
+                                }
+                                else if (order.Status == RestaurantOrderStatus.Preparing)
+                                {
+                                    <input type="hidden" name="status" value="@RestaurantOrderStatus.Ready" />
+                                    <button type="submit" class="btn btn-info text-white w-100 fw-bold py-2">Mark as Ready</button>
+                                }
+                                else if (order.Status == RestaurantOrderStatus.Ready)
+                                {
+                                    <input type="hidden" name="status" value="@RestaurantOrderStatus.Served" />
+                                    <button type="submit" class="btn btn-success w-100 fw-bold py-2">Mark as Served</button>
+                                }
+                                else if (order.Status == RestaurantOrderStatus.Served)
+                                {
+                                    <button type="button" class="btn btn-outline-secondary w-100" disabled>Served (Awaiting Cashier)</button>
+                                }
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

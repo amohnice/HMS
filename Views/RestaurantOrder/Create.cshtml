@@ -1,0 +1,218 @@
+@using HMS.Models.Restaurant
+@{
+    ViewData["Title"] = "Take Restaurant Order";
+    var tables = (List<RestaurantTable>)ViewBag.Tables;
+    var menuItems = (List<RestaurantMenu>)ViewBag.MenuItems;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h2 mb-0 fw-bold">New Order</h1>
+        <p class="text-muted mb-0">Select a table and add items to place a new kitchen order</p>
+    </div>
+    <a asp-action="Index" class="btn btn-secondary btn-sm">Back to Orders</a>
+</div>
+
+<div class="pos-container">
+    <!-- Menu Panel (Left) -->
+    <div>
+        <!-- Category Nav -->
+        <ul class="nav nav-pills mb-3" id="menuTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="all-tab" data-bs-toggle="pill" data-bs-target="#cat-all" type="button">All Items</button>
+            </li>
+            @foreach (var cat in menuItems.Select(m => m.Category).Distinct())
+            {
+                <li class="nav-item">
+                    <button class="nav-link" id="tab-@cat" data-bs-toggle="pill" data-bs-target="#cat-@cat" type="button">@cat</button>
+                </li>
+            }
+        </ul>
+
+        <!-- Tab Contents -->
+        <div class="tab-content">
+            <!-- All Items -->
+            <div class="tab-pane fade show active" id="cat-all">
+                <div class="pos-menu-grid">
+                    @foreach (var item in menuItems)
+                    {
+                        <div class="card menu-item-card" onclick="addToCart(@item.Id, '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(item.Name))', @item.Price)">
+                            <div class="card-body p-3">
+                                <span class="badge bg-light text-secondary mb-1">@item.Category</span>
+                                <h6 class="fw-bold mb-1">@item.Name</h6>
+                                <p class="text-muted small mb-2 text-truncate">@item.Description</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold text-primary">Ksh @item.Price.ToString("N0")</span>
+                                    <span class="btn btn-sm btn-primary icon-action-btn">+</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Categorized tabs -->
+            @foreach (var cat in menuItems.Select(m => m.Category).Distinct())
+            {
+                <div class="tab-pane fade" id="cat-@cat">
+                    <div class="pos-menu-grid">
+                        @foreach (var item in menuItems.Where(m => m.Category == cat))
+                        {
+                            <div class="card menu-item-card" onclick="addToCart(@item.Id, '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(item.Name))', @item.Price)">
+                                <div class="card-body p-3">
+                                    <h6 class="fw-bold mb-1">@item.Name</h6>
+                                    <p class="text-muted small mb-2 text-truncate">@item.Description</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold text-primary">Ksh @item.Price.ToString("N0")</span>
+                                        <span class="btn btn-sm btn-primary icon-action-btn">+</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Order Cart Panel (Right) -->
+    <div class="pos-cart-panel shadow-sm">
+        <h5 class="fw-bold mb-3 border-bottom pb-2">Current Cart</h5>
+
+        <form id="orderForm" asp-action="Create" method="post" onsubmit="prepareForm(event)">
+            @Html.AntiForgeryToken()
+            <div id="hiddenInputs"></div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Select Table</label>
+                <select name="tableId" class="form-select form-select-sm" required>
+                    <option value="" disabled selected>-- Choose Table --</option>
+                    @foreach (var table in tables)
+                    {
+                        <option value="@table.Id">Table @table.TableNumber (Cap: @table.Capacity) - @table.Status</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Customer Name (Optional)</label>
+                <input name="customerName" type="text" class="form-control form-control-sm" placeholder="e.g. John Doe" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Notes / Requests</label>
+                <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="e.g. No onions, Extra spicy"></textarea>
+            </div>
+
+            <div class="pos-cart-items-header d-flex justify-content-between small fw-bold text-muted border-bottom pb-1 mb-2">
+                <span>Item</span>
+                <span>Qty/Price</span>
+            </div>
+
+            <div class="pos-cart-items" id="cartContainer">
+                <div class="text-center text-muted py-5" id="emptyCartMessage">
+                    Cart is empty. Click items on the left to add.
+                </div>
+            </div>
+
+            <div class="border-top pt-3 mt-auto">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="fw-bold">Total Amount:</span>
+                    <span class="fw-bold text-primary fs-5" id="cartTotal">Ksh 0.00</span>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 btn-lg" id="submitBtn" disabled>Submit Order to Kitchen</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let cart = [];
+
+        function addToCart(id, name, price) {
+            const existing = cart.find(item => item.id === id);
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({ id, name, price, qty: 1 });
+            }
+            renderCart();
+        }
+
+        function changeQty(id, delta) {
+            const item = cart.find(item => item.id === id);
+            if (item) {
+                item.qty += delta;
+                if (item.qty <= 0) {
+                    cart = cart.filter(x => x.id !== id);
+                }
+                renderCart();
+            }
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartContainer');
+            const emptyMessage = document.getElementById('emptyCartMessage');
+            const totalText = document.getElementById('cartTotal');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (cart.length === 0) {
+                container.innerHTML = `<div class="text-center text-muted py-5" id="emptyCartMessage">Cart is empty. Click items on the left to add.</div>`;
+                totalText.innerText = "Ksh 0.00";
+                submitBtn.disabled = true;
+                return;
+            }
+
+            container.innerHTML = '';
+            let total = 0;
+
+            cart.forEach(item => {
+                const subtotal = item.price * item.qty;
+                total += subtotal;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'pos-cart-item';
+                itemDiv.innerHTML = `
+                    <div class="cart-item-name">
+                        <div class="fw-bold text-truncate small">${item.name}</div>
+                        <div class="text-muted small">Ksh ${item.price}</div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <button type="button" class="btn btn-sm btn-outline-secondary p-1 py-0 me-2" onclick="changeQty(${item.id}, -1)">-</button>
+                        <span class="fw-bold me-2 small cart-qty-pill">${item.qty}</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary p-1 py-0 me-2" onclick="changeQty(${item.id}, 1)">+</button>
+                        <span class="fw-bold text-primary small">Ksh ${subtotal.toLocaleString()}</span>
+                    </div>
+                `;
+                container.appendChild(itemDiv);
+            });
+
+            totalText.innerText = "Ksh " + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            submitBtn.disabled = false;
+        }
+
+        function prepareForm(event) {
+            event.preventDefault();
+            const form = document.getElementById('orderForm');
+            const hiddenInputs = document.getElementById('hiddenInputs');
+            hiddenInputs.innerHTML = '';
+
+            cart.forEach(item => {
+                const idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'menuItemIds';
+                idInput.value = item.id;
+                hiddenInputs.appendChild(idInput);
+
+                const qtyInput = document.createElement('input');
+                qtyInput.type = 'hidden';
+                qtyInput.name = 'quantities';
+                qtyInput.value = item.qty;
+                hiddenInputs.appendChild(qtyInput);
+            });
+
+            form.submit();
+        }
+    </script>
+}

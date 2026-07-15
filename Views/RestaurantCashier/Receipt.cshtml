@@ -1,0 +1,83 @@
+@model HMS.Models.Restaurant.RestaurantOrder
+@{
+    ViewData["Title"] = "Order Receipt";
+}
+
+<div class="d-print-none text-center mb-4">
+    <button onclick="window.print()" class="btn btn-primary d-inline-flex align-items-center">
+        <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+        Print Receipt
+    </button>
+    <a asp-action="Index" class="btn btn-secondary ms-2">Back to Cashier</a>
+</div>
+
+<div class="receipt-container">
+    <div class="receipt-header">
+        <h5 class="fw-bold mb-0">AMTECH HMS</h5>
+        <span class="small d-block">RESTAURANT RECEIPT</span>
+        <span class="small text-muted">Tel: +254 700 000000</span>
+    </div>
+
+    <div class="receipt-row">
+        <span>Receipt No:</span>
+        <span class="fw-bold">#R-@Model.Id</span>
+    </div>
+    <div class="receipt-row">
+        <span>Date:</span>
+        <span>@Model.PaidAt?.ToString("yyyy-MM-dd HH:mm")</span>
+    </div>
+    <div class="receipt-row">
+        <span>Table:</span>
+        <span>Table @Model.Table.TableNumber</span>
+    </div>
+    <div class="receipt-row">
+        <span>Cashier:</span>
+        <span>@Model.Waiter.FullName</span>
+    </div>
+    <div class="receipt-row mb-1">
+        <span>Customer:</span>
+        <span>@(string.IsNullOrWhiteSpace(Model.CustomerName) ? "Guest" : Model.CustomerName)</span>
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <div class="fw-bold receipt-row mb-2">
+        <span>Item Description</span>
+        <span>Total</span>
+    </div>
+
+    @foreach (var item in Model.Items)
+    {
+        <div class="receipt-row">
+            <span>@item.MenuItem.Name</span>
+            <span>Ksh @item.LineTotal.ToString("N0")</span>
+        </div>
+        <div class="receipt-row text-muted small" style="margin-top: -3px; font-size: 0.8rem;">
+            <span>@item.Quantity @(item.Quantity == 1 ? "unit" : "units") &times; Ksh @item.UnitPrice.ToString("N0")</span>
+        </div>
+    }
+
+    <div class="receipt-divider"></div>
+
+    <div class="receipt-row fw-bold fs-6">
+        <span>TOTAL DUE</span>
+        <span>Ksh @Model.TotalAmount.ToString("N2")</span>
+    </div>
+
+    <div class="receipt-row">
+        <span>Amount Paid (@Model.PaymentMethod)</span>
+        <span>Ksh @Model.AmountPaid?.ToString("N2")</span>
+    </div>
+
+    <div class="receipt-row">
+        <span>Change Returned</span>
+        <span>Ksh @Model.ChangeAmount?.ToString("N2")</span>
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <div class="text-center small mt-3">
+        <strong>Thank You for Dining With Us!</strong><br />
+        <span>Please come again!</span>
+    </div>
+</div>

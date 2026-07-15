@@ -1,0 +1,108 @@
+@model IEnumerable<HMS.Models.Shop.ShopProduct>
+@{
+    ViewData["Title"] = "Shop Products Inventory";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-0 fw-bold">Shop Products</h1>
+        <p class="text-muted">Manage shop items, barcode indexing, and stock levels</p>
+    </div>
+    <div>
+        <a asp-action="Create" class="btn btn-primary d-inline-flex align-items-center">
+            <svg class="me-2" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add Product
+        </a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="Index" class="row g-3 align-items-center">
+            <div class="col-md-9 col-lg-10">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-muted">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </span>
+                    <input type="text" name="search" value="@ViewBag.Search" class="form-control border-start-0 ps-0" placeholder="Search products by name or barcode..." />
+                </div>
+            </div>
+            <div class="col-md-3 col-lg-2">
+                <button type="submit" class="btn btn-secondary w-100">Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">Product ID</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Barcode</th>
+                    <th>Price</th>
+                    <th class="text-center">Stock Qty</th>
+                    <th>Status</th>
+                    <th class="text-center pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <svg class="mb-3" width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                            <p class="mb-0">No products found.</p>
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var p in Model)
+                    {
+                        var lowStock = p.StockQuantity <= 10;
+                        <tr>
+                            <td class="ps-4 fw-bold">#@p.Id</td>
+                            <td>
+                                <div class="fw-bold">@p.Name</div>
+                                <span class="text-muted small">@p.Description</span>
+                            </td>
+                            <td><span class="badge bg-light text-dark">@p.Category</span></td>
+                            <td><code>@(string.IsNullOrWhiteSpace(p.Barcode) ? "N/A" : p.Barcode)</code></td>
+                            <td class="fw-bold text-primary">Ksh @p.Price.ToString("N2")</td>
+                            <td class="text-center">
+                                @if (lowStock)
+                                {
+                                    <span class="badge bg-danger bg-opacity-10 text-danger fs-6 px-3 py-1" title="Low stock! Threshold is 10.">@p.StockQuantity (Low)</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success bg-opacity-10 text-success fs-6 px-3 py-1">@p.StockQuantity</span>
+                                }
+                            </td>
+                            <td>
+                                @if (p.IsActive)
+                                {
+                                    <span class="badge-status status-available">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-status status-occupied">Inactive</span>
+                                }
+                            </td>
+                            <td class="text-center pe-4">
+                                <div class="btn-group">
+                                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary py-1 px-3">Edit</a>
+                                    <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-sm btn-outline-danger py-1 px-3">Delete</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
