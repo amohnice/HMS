@@ -1176,6 +1176,415 @@ html, body {
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* ============================================================
+   KDS LAYOUT (Kitchen Display System - No Sidebar)
+   ============================================================ */
+.app-shell.kds-mode {
+    flex-direction: column;
+    background: #0a0a0a;
+}
+
+.kds-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0f172a;
+    border-bottom: 2px solid #1e293b;
+    padding: 0 24px;
+    height: 60px;
+    flex-shrink: 0;
+    z-index: 100;
+}
+
+.kds-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #f8fafc;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: -0.3px;
+}
+
+.kds-brand-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--primary-gradient);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.kds-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.kds-stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    border: 1px solid transparent;
+}
+
+.kds-stat-chip.pending  { background: rgba(251,191,36,0.15); color: #fbbf24; border-color: rgba(251,191,36,0.3); }
+.kds-stat-chip.preparing { background: rgba(56,189,248,0.15); color: #38bdf8; border-color: rgba(56,189,248,0.3); }
+.kds-stat-chip.ready    { background: rgba(52,211,153,0.15); color: #34d399; border-color: rgba(52,211,153,0.3); }
+
+.kds-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.kds-clock {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+.kds-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: #cbd5e1;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+.kds-action-btn:hover { background: rgba(255,255,255,0.12); color: #f8fafc; text-decoration: none; }
+.kds-action-btn:active { transform: scale(0.97); }
+
+.kds-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #0f172a;
+}
+
+/* ============================================================
+   BOTTOM NAVIGATION DOCK (Waiters / Mobile Floor Staff)
+   ============================================================ */
+.bottom-nav {
+    display: none; /* shown only on mobile for waiter/floor roles */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #0f172a;
+    border-top: 1px solid #1e293b;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+    padding: env(safe-area-inset-bottom, 0) 0 0;
+}
+
+.bottom-nav-inner {
+    display: flex;
+    align-items: stretch;
+    height: 64px;
+}
+
+.bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: #64748b;
+    text-decoration: none;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    padding: 8px 4px;
+    transition: color 0.15s ease, background 0.15s ease;
+    position: relative;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.bottom-nav-item:hover,
+.bottom-nav-item.active {
+    color: #6366f1;
+    text-decoration: none;
+}
+
+.bottom-nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: #6366f1;
+    border-radius: 0 0 4px 4px;
+}
+
+.bottom-nav-item svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+/* Bottom nav primary action (center FAB-style) */
+.bottom-nav-item.primary-action {
+    position: relative;
+    top: -10px;
+}
+
+.bottom-nav-item.primary-action .bottom-nav-fab {
+    width: 50px;
+    height: 50px;
+    background: var(--primary-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(99,102,241,0.45);
+    color: white;
+    margin-bottom: 2px;
+}
+
+/* Content padding for bottom nav mode (so content doesn't hide behind it) */
+.has-bottom-nav .page-content {
+    padding-bottom: 80px !important;
+}
+
+/* Show bottom nav on mobile viewports */
+@media (max-width: 767.98px) {
+    .bottom-nav.role-waiter,
+    .bottom-nav.role-cashier,
+    .bottom-nav.role-shopcashier {
+        display: block;
+    }
+}
+
+/* ============================================================
+   POS TOP TAB BAR (Cashier & Shop Cashier on all screens)
+   ============================================================ */
+.app-shell.pos-mode {
+    flex-direction: column;
+}
+
+.pos-topbar {
+    display: flex;
+    align-items: center;
+    background: #0f172a;
+    border-bottom: 1px solid #1e293b;
+    height: 56px;
+    padding: 0 20px;
+    gap: 8px;
+    flex-shrink: 0;
+    z-index: 100;
+}
+
+.pos-topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #f8fafc;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.2px;
+    flex-shrink: 0;
+    margin-right: 12px;
+}
+
+.pos-topbar-brand-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--primary-gradient);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.pos-nav-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+}
+
+.pos-nav-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 16px;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 0.83rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.pos-nav-tab:hover {
+    color: #cbd5e1;
+    background: rgba(255,255,255,0.05);
+    text-decoration: none;
+}
+
+.pos-nav-tab.active {
+    background: rgba(99,102,241,0.15);
+    color: #a5b4fc;
+    border-color: rgba(99,102,241,0.3);
+}
+
+.pos-nav-tab svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+.pos-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.pos-user-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 999px;
+    color: #94a3b8;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.pos-avatar {
+    width: 24px;
+    height: 24px;
+    background: var(--primary-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.pos-logout-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 8px;
+    color: #f87171;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.pos-logout-btn:hover {
+    background: rgba(239,68,68,0.18);
+    color: #fca5a5;
+    text-decoration: none;
+}
+
+.pos-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: var(--bg-main);
+}
+
+/* ============================================================
+   ADMIN MOBILE ADAPTIVE (Sidebar → Bottom Dock on Mobile)
+   ============================================================ */
+@media (max-width: 767.98px) {
+    /* Collapse sidebar on mobile for admin/manager */
+    .app-shell:not(.kds-mode):not(.pos-mode) .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        transform: translateX(-100%);
+        box-shadow: var(--shadow-lg);
+        z-index: 300;
+    }
+
+    .app-shell:not(.kds-mode):not(.pos-mode) .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .app-shell:not(.kds-mode):not(.pos-mode) .main-area {
+        width: 100%;
+        padding-bottom: 72px; /* room for bottom dock */
+    }
+
+    /* Admin mobile bottom dock */
+    .admin-mobile-dock {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 200;
+        background: #0f172a;
+        border-top: 1px solid #1e293b;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        height: 64px;
+        padding: env(safe-area-inset-bottom, 0) 0 0;
+    }
+
+    .admin-dock-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        color: #64748b;
+        font-size: 0.6rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        text-decoration: none;
+        transition: color 0.15s ease;
+        border: none;
+        background: none;
+        cursor: pointer;
+        padding: 4px;
+    }
+
+    .admin-dock-item svg { width: 20px; height: 20px; }
+
+    .admin-dock-item:hover,
+    .admin-dock-item.active { color: #6366f1; text-decoration: none; }
+}
+
+@media (min-width: 768px) {
+    .admin-mobile-dock { display: none !important; }
+}
+
+
+/* ============================================================
    THERMAL RECEIPT PRINT MEDIA STYLES (58mm / 80mm POS PAPER)
    ============================================================ */
 @page {
