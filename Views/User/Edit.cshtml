@@ -1,0 +1,68 @@
+@model HMS.Models.ViewModels.EditUserViewModel
+@{
+    ViewData["Title"] = "Edit Staff Details";
+    string[] roles = ViewBag.AvailableRoles as string[] ?? Array.Empty<string>();
+}
+
+<div class="container-fluid px-0" style="max-width: 700px;">
+    <!-- Page Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1 text-dark">Edit Staff Account</h1>
+            <p class="text-muted small mb-0">Update staff details and role assignments.</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm px-3">
+            Back to Staff List
+        </a>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-4">
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="UserId" />
+
+                <div class="mb-3">
+                    <label asp-for="FullName" class="form-label fw-semibold text-dark">Full Name</label>
+                    <input asp-for="FullName" class="form-control form-control-lg" />
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label fw-semibold text-dark">Email Address</label>
+                    <input asp-for="Email" type="email" class="form-control form-control-lg" />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Role" class="form-label fw-semibold text-dark">Role</label>
+                    <select asp-for="Role" class="form-select form-select-lg">
+                        @foreach (var r in roles)
+                        {
+                            <option value="@r">@r</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Role" class="text-danger small"></span>
+                </div>
+
+                <div class="form-check form-switch mb-4 p-3 bg-light rounded-3 border ps-5">
+                    <input asp-for="IsActive" class="form-check-input ms-n4" type="checkbox" id="isActiveSwitch" />
+                    <label class="form-check-label fw-semibold text-dark" for="isActiveSwitch">Account Active</label>
+                    <div class="form-text">Inactive users cannot log into the HMS application.</div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 pt-2">
+                    <a asp-action="Index" class="btn btn-light px-4">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

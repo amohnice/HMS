@@ -66,6 +66,7 @@ static async Task SeedDataAsync(ApplicationDbContext context, IUserService userS
     {
         var users = new[]
         {
+            new User { FullName = "Super Admin", Email = "superadmin@hms.local", Role = "SuperAdmin" },
             new User { FullName = "System Admin", Email = "admin@hms.local", Role = "Admin" },
             new User { FullName = "Restaurant Waiter", Email = "waiter@hms.local", Role = "Waiter" },
             new User { FullName = "Kitchen Staff", Email = "kitchen@hms.local", Role = "Kitchen" },

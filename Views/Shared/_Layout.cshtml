@@ -41,11 +41,11 @@
                     <span>Dashboard</span>
                 </a>
 
-                @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Waiter") || User.IsInRole("Kitchen") || User.IsInRole("Cashier"))
+                @if (User.IsInRole("SuperAdmin") || User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Waiter") || User.IsInRole("Kitchen") || User.IsInRole("Cashier"))
                 {
                     <div class="sidebar-section-label">Restaurant</div>
 
-                    @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                    @if (User.IsInRole("SuperAdmin") || User.IsInRole("Admin") || User.IsInRole("Manager"))
                     {
                         <a class="sidebar-nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "RestaurantMenu" ? "active" : "")"
                            asp-controller="RestaurantMenu" asp-action="Index">
@@ -54,7 +54,7 @@
                         </a>
                     }
 
-                    @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Waiter"))
+                    @if (User.IsInRole("SuperAdmin") || User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Waiter"))
                     {
                         <a class="sidebar-nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "RestaurantTable" ? "active" : "")"
                            asp-controller="RestaurantTable" asp-action="Index">
@@ -73,7 +73,7 @@
                         </a>
                     }
 
-                    @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Kitchen"))
+                    @if (User.IsInRole("SuperAdmin") || User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Kitchen"))
                     {
                         <a class="sidebar-nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Kitchen" ? "active" : "")"
                            asp-controller="Kitchen" asp-action="Index">
@@ -82,7 +82,7 @@
                         </a>
                     }
 
-                    @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Cashier"))
+                    @if (User.IsInRole("SuperAdmin") || User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Cashier"))
                     {
                         <a class="sidebar-nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "RestaurantCashier" ? "active" : "")"
                            asp-controller="RestaurantCashier" asp-action="Index">
@@ -97,11 +97,11 @@
                     }
                 }
 
-                @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("ShopCashier"))
+                @if (User.IsInRole("SuperAdmin") || User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("ShopCashier"))
                 {
                     <div class="sidebar-section-label">Shop</div>
 
-                    @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                    @if (User.IsInRole("SuperAdmin") || User.IsInRole("Admin") || User.IsInRole("Manager"))
                     {
                         <a class="sidebar-nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "ShopProduct" ? "active" : "")"
                            asp-controller="ShopProduct" asp-action="Index">
@@ -120,6 +120,17 @@
                        asp-controller="ShopReport" asp-action="Index">
                         <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         <span>S. Reports</span>
+                    </a>
+                }
+
+                @if (User.IsInRole("SuperAdmin") || User.IsInRole("Admin"))
+                {
+                    <div class="sidebar-section-label">System</div>
+
+                    <a class="sidebar-nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "User" ? "active" : "")"
+                       asp-controller="User" asp-action="Index">
+                        <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        <span>Staff & Users</span>
                     </a>
                 }
 
