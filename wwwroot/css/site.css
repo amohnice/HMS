@@ -1174,3 +1174,93 @@ html, body {
 ::-webkit-scrollbar-track { background: #f1f5f9; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ============================================================
+   THERMAL RECEIPT PRINT MEDIA STYLES (58mm / 80mm POS PAPER)
+   ============================================================ */
+@page {
+    size: 80mm auto;
+    margin: 0mm;
+}
+
+@media print {
+    html, body {
+        width: 80mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 11px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Hide non-printable app shell elements */
+    .sidebar, 
+    .sidebar-overlay, 
+    .mobile-page-toolbar, 
+    .alert-zone, 
+    .d-print-none,
+    header,
+    footer,
+    nav {
+        display: none !important;
+    }
+
+    .app-shell,
+    .main-area, 
+    .page-content {
+        display: block !important;
+        width: 80mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+
+    .receipt-container {
+        display: block !important;
+        max-width: 80mm !important;
+        width: 80mm !important;
+        margin: 0 auto !important;
+        padding: 6mm 4mm !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        background: #fff !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 11px !important;
+        color: #000 !important;
+        page-break-after: avoid;
+        page-break-inside: avoid;
+    }
+
+    .receipt-header {
+        text-align: center !important;
+        margin-bottom: 8px !important;
+    }
+
+    .receipt-header h5 {
+        font-size: 13px !important;
+        font-weight: bold !important;
+        margin-bottom: 2px !important;
+    }
+
+    .receipt-divider {
+        border-top: 1px dashed #000 !important;
+        margin: 6px 0 !important;
+    }
+
+    .receipt-row {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        margin: 2px 0 !important;
+        font-size: 11px !important;
+        line-height: 1.25 !important;
+    }
+
+    .receipt-row span {
+        font-size: 11px !important;
+    }
+}
