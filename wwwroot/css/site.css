@@ -1370,9 +1370,54 @@ html, body {
 /* Show bottom nav on mobile viewports */
 @media (max-width: 767.98px) {
     .bottom-nav.role-waiter,
+    .bottom-nav.role-kitchen,
     .bottom-nav.role-cashier,
     .bottom-nav.role-shopcashier {
         display: block;
+    }
+}
+
+/* Hide bottom nav on desktop for roles that have top bars */
+@media (min-width: 768px) {
+    .bottom-nav.role-waiter,
+    .bottom-nav.role-kitchen,
+    .bottom-nav.role-cashier,
+    .bottom-nav.role-shopcashier {
+        display: none !important;
+    }
+}
+
+/* Hide top bar navigation tabs on mobile - keep brand and user info */
+@media (max-width: 767.98px) {
+    /* Hide POS navigation tabs on mobile */
+    .app-shell.pos-mode .pos-nav-tabs {
+        display: none !important;
+    }
+
+    /* Hide POS logout button on mobile (it's in bottom nav) */
+    .app-shell.pos-mode .pos-logout-btn {
+        display: none !important;
+    }
+
+    /* Hide KDS status bar on mobile (keep brand and right side) */
+    .app-shell.kds-mode .kds-status-bar {
+        display: none !important;
+    }
+
+    /* Hide KDS logout button on mobile (it's in bottom nav) */
+    .app-shell.kds-mode .kds-action-btn[href*="Logout"] {
+        display: none !important;
+    }
+
+    /* Add bottom padding to content when bottom nav is shown */
+    .app-shell.pos-mode:has(.bottom-nav.role-waiter) .pos-content,
+    .app-shell.pos-mode:has(.bottom-nav.role-cashier) .pos-content,
+    .app-shell.pos-mode:has(.bottom-nav.role-shopcashier) .pos-content {
+        padding-bottom: 80px !important;
+    }
+
+    .app-shell.kds-mode:has(.bottom-nav.role-kitchen) .kds-content {
+        padding-bottom: 80px !important;
     }
 }
 

@@ -43,6 +43,10 @@
                 </div>
 
                 <div class="kds-status-bar">
+                    <a asp-controller="Home" asp-action="Index" class="kds-action-btn" style="border-color:rgba(99,102,241,0.3);color:#a5b4fc;">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        Home
+                    </a>
                     <span class="kds-stat-chip pending">
                         <span class="spinner-grow spinner-grow-sm" style="width:8px;height:8px;" role="status"></span>
                         Pending <strong id="kdsPendingCount">—</strong>
@@ -80,6 +84,24 @@
             <main class="kds-content">
                 @RenderBody()
             </main>
+
+            @* Kitchen Bottom Navigation Dock (mobile only) *@
+            <nav class="bottom-nav role-kitchen">
+                <div class="bottom-nav-inner">
+                    <a class="bottom-nav-item @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        Home
+                    </a>
+                    <a class="bottom-nav-item @(ctrl == "Kitchen" ? "active" : "")" asp-controller="Kitchen" asp-action="Index">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"></path></svg>
+                        Kitchen
+                    </a>
+                    <a class="bottom-nav-item" asp-controller="Account" asp-action="Logout" style="color:#f87171 !important;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        Logout
+                    </a>
+                </div>
+            </nav>
         </div>
     }
 
@@ -100,6 +122,10 @@
                 <nav class="pos-nav-tabs">
                     @if (isCashier)
                     {
+                        <a class="pos-nav-tab @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                            Home
+                        </a>
                         <a class="pos-nav-tab @(ctrl == "RestaurantCashier" ? "active" : "")" asp-controller="RestaurantCashier" asp-action="Index">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                             POS Register
@@ -111,6 +137,10 @@
                     }
                     @if (isShopCashier)
                     {
+                        <a class="pos-nav-tab @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                            Home
+                        </a>
                         <a class="pos-nav-tab @(ctrl == "ShopCashier" ? "active" : "")" asp-controller="ShopCashier" asp-action="Index">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                             Shop POS
@@ -149,6 +179,148 @@
             <main class="pos-content">
                 @RenderBody()
             </main>
+
+            @* POS Bottom Navigation Dock (mobile only) *@
+            @if (isCashier)
+            {
+                <nav class="bottom-nav role-cashier">
+                    <div class="bottom-nav-inner">
+                        <a class="bottom-nav-item @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                            Home
+                        </a>
+                        <a class="bottom-nav-item @(ctrl == "RestaurantCashier" ? "active" : "")" asp-controller="RestaurantCashier" asp-action="Index">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            POS
+                        </a>
+                        <a class="bottom-nav-item @(ctrl == "RestaurantReport" ? "active" : "")" asp-controller="RestaurantReport" asp-action="Index">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            Reports
+                        </a>
+                        <a class="bottom-nav-item" asp-controller="Account" asp-action="Logout" style="color:#f87171 !important;">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            Logout
+                        </a>
+                    </div>
+                </nav>
+            }
+            @if (isShopCashier)
+            {
+                <nav class="bottom-nav role-shopcashier">
+                    <div class="bottom-nav-inner">
+                        <a class="bottom-nav-item @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                            Home
+                        </a>
+                        <a class="bottom-nav-item @(ctrl == "ShopCashier" ? "active" : "")" asp-controller="ShopCashier" asp-action="Index">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            POS
+                        </a>
+                        <a class="bottom-nav-item @(ctrl == "ShopReport" ? "active" : "")" asp-controller="ShopReport" asp-action="Index">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            Reports
+                        </a>
+                        <a class="bottom-nav-item" asp-controller="Account" asp-action="Logout" style="color:#f87171 !important;">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            Logout
+                        </a>
+                    </div>
+                </nav>
+            }
+        </div>
+    }
+
+    @* ════════════════════════════════════════════════
+       MODE 2.5 — WAITER TOP BAR (Waiter on desktop)
+       ════════════════════════════════════════════════ *@
+    else if (isWaiter)
+    {
+        <div class="app-shell pos-mode">
+            <header class="pos-topbar" data-role="waiter">
+                <div class="pos-topbar-brand">
+                    <div class="pos-topbar-brand-icon">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    </div>
+                    <span>HMS Waiter</span>
+                </div>
+
+                <nav class="pos-nav-tabs">
+                    <a class="pos-nav-tab @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        Home
+                    </a>
+                    <a class="pos-nav-tab @(ctrl == "RestaurantTable" ? "active" : "")" asp-controller="RestaurantTable" asp-action="Index">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        Tables
+                    </a>
+                    <a class="pos-nav-tab @(ctrl == "RestaurantOrder" && act == "Create" ? "active" : "")" asp-controller="RestaurantOrder" asp-action="Create">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Take Order
+                    </a>
+                    <a class="pos-nav-tab @(ctrl == "RestaurantOrder" && act == "Index" ? "active" : "")" asp-controller="RestaurantOrder" asp-action="Index">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                        Orders
+                    </a>
+                </nav>
+
+                <div class="pos-topbar-right">
+                    <div class="pos-user-chip d-none d-sm-flex">
+                        <div class="pos-avatar">@userInitial</div>
+                        <span>@userName</span>
+                        <span class="badge bg-secondary ms-1" style="font-size:0.62rem;">@role</span>
+                    </div>
+                    <a asp-controller="Account" asp-action="Logout" class="pos-logout-btn">
+                        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        <span class="d-none d-sm-inline">Logout</span>
+                    </a>
+                </div>
+            </header>
+
+            <div class="px-3 pt-2">
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="app-alert app-alert-success" id="successAlert">@TempData["SuccessMessage"] <button class="app-alert-close" onclick="this.parentElement.remove()">×</button></div>
+                }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="app-alert app-alert-error" id="errorAlert">@TempData["ErrorMessage"] <button class="app-alert-close" onclick="this.parentElement.remove()">×</button></div>
+                }
+            </div>
+
+            <main class="pos-content">
+                @RenderBody()
+            </main>
+
+            @* Waiter Bottom Navigation Dock (mobile only) *@
+            <nav class="bottom-nav role-waiter">
+                <div class="bottom-nav-inner">
+                    <a class="bottom-nav-item @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        Home
+                    </a>
+                    <a class="bottom-nav-item @(ctrl == "RestaurantTable" ? "active" : "")" asp-controller="RestaurantTable" asp-action="Index">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        Tables
+                    </a>
+                    <!-- Centre FAB -->
+                    <a class="bottom-nav-item primary-action @(ctrl == "RestaurantOrder" && act == "Create" ? "active" : "")"
+                       asp-controller="RestaurantOrder" asp-action="Create">
+                        <div class="bottom-nav-fab">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </div>
+                        Order
+                    </a>
+                    <a class="bottom-nav-item @(ctrl == "RestaurantOrder" && act == "Index" ? "active" : "")"
+                       asp-controller="RestaurantOrder" asp-action="Index">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                        Orders
+                    </a>
+                    <a class="bottom-nav-item" asp-controller="Account" asp-action="Logout" style="color:#f87171 !important;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        Logout
+                    </a>
+                </div>
+            </nav>
         </div>
     }
 
