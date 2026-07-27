@@ -1,26 +1,25 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
-using HMS.Data;
 using HMS.Models.Shop;
+using HMS.Services;
 
 namespace HMS.Controllers.Shop;
 
 [Authorize(Roles = "Admin,Manager,ShopCashier")]
 public class ShopProductController : Controller
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IShopProductService _productService;
 
-    public ShopProductController(ApplicationDbContext context) => _context = context;
-
-    public async Task<IActionResult> Index(string? search)
+    public ShopProductController(IShopProductService productService)
     {
-        var query = _context.ShopProducts.AsQueryable();
-        if (!string.IsNullOrWhiteSpace(search))
-            query = query.Where(p => p.Name.Contains(search) || (p.Barcode != null && p.Barcode.Contains(search)));
+        _productService = productService;
+    }
 
+    public async Task<IActionResult> Index(string? search, int page = 1, int pageSize = 10)
+    {
         ViewBag.Search = search;
-        return View(await query.OrderBy(p => p.Category).ThenBy(p => p.Name).ToListAsync());
+        var products = await _productService.GetPaginatedProductsAsync(page, pageSize, search);
+        return View(products);
     }
 
     public IActionResult Create() => View();
@@ -31,9 +30,7 @@ public class ShopProductController : Controller
     {
         if (ModelState.IsValid)
         {
-            product.CreatedAt = DateTime.Now;
-            _context.ShopProducts.Add(product);
-            await _context.SaveChangesAsync();
+            await _productService.CreateProductAsync(product);
             TempData["SuccessMessage"] = "Product added.";
             return RedirectToAction(nameof(Index));
         }
@@ -42,7 +39,7 @@ public class ShopProductController : Controller
 
     public async Task<IActionResult> Edit(int id)
     {
-        var product = await _context.ShopProducts.FindAsync(id);
+        var product = await _productService.GetProductByIdAsync(id);
         return product == null ? NotFound() : View(product);
     }
 
@@ -53,8 +50,9 @@ public class ShopProductController : Controller
         if (id != product.Id) return NotFound();
         if (ModelState.IsValid)
         {
-            _context.Update(product);
-            await _context.SaveChangesAsync();
+            var success = await _productService.UpdateProductAsync(product);
+            if (!success) return NotFound();
+
             TempData["SuccessMessage"] = "Product updated.";
             return RedirectToAction(nameof(Index));
         }
@@ -63,7 +61,7 @@ public class ShopProductController : Controller
 
     public async Task<IActionResult> Delete(int id)
     {
-        var product = await _context.ShopProducts.FindAsync(id);
+        var product = await _productService.GetProductByIdAsync(id);
         return product == null ? NotFound() : View(product);
     }
 
@@ -71,11 +69,9 @@ public class ShopProductController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
-        var product = await _context.ShopProducts.FindAsync(id);
-        if (product != null)
+        var success = await _productService.DeleteProductAsync(id);
+        if (success)
         {
-            _context.ShopProducts.Remove(product);
-            await _context.SaveChangesAsync();
             TempData["SuccessMessage"] = "Product deleted.";
         }
         return RedirectToAction(nameof(Index));

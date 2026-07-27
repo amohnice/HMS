@@ -11,6 +11,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IShopProductService, ShopProductService>();
+builder.Services.AddScoped<IRestaurantOrderService, RestaurantOrderService>();
+builder.Services.AddScoped<IRestaurantMenuService, RestaurantMenuService>();
+builder.Services.AddScoped<IShopSaleService, ShopSaleService>();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>

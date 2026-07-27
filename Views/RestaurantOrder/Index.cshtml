@@ -1,4 +1,4 @@
-@model IEnumerable<HMS.Models.Restaurant.RestaurantOrder>
+@model HMS.Models.Common.PagedList<HMS.Models.Restaurant.RestaurantOrder>
 @using HMS.Models
 @{
     ViewData["Title"] = "Restaurant Orders";
@@ -36,7 +36,7 @@
                 </tr>
             </thead>
             <tbody>
-                @if (!Model.Any())
+                @if (!Model.Items.Any())
                 {
                     <tr>
                         <td colspan="8" class="text-center py-5 text-muted">
@@ -47,7 +47,7 @@
                 }
                 else
                 {
-                    foreach (var order in Model)
+                    foreach (var order in Model.Items)
                     {
                         var statusClass = order.Status switch
                         {
@@ -63,9 +63,9 @@
                         <tr>
                             <td class="ps-4 fw-bold">#@order.Id</td>
                             <td>@order.OrderTime.ToString("yyyy-MM-dd HH:mm")</td>
-                            <td><span class="badge bg-secondary">Table @order.Table.TableNumber</span></td>
+                            <td><span class="badge bg-secondary">Table @order.Table?.TableNumber</span></td>
                             <td>@(string.IsNullOrWhiteSpace(order.CustomerName) ? "Guest" : order.CustomerName)</td>
-                            <td>@order.Waiter.FullName</td>
+                            <td>@order.Waiter?.FullName</td>
                             <td><span class="badge-status @statusClass">@order.Status</span></td>
                             <td class="text-end fw-bold text-primary">Ksh @order.TotalAmount.ToString("N2")</td>
                             <td class="text-center">
@@ -77,4 +77,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_Pagination" model="Model" />
 </div>

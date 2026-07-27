@@ -1,4 +1,4 @@
-@model IEnumerable<HMS.Models.User>
+@model HMS.Models.Common.PagedList<HMS.Models.User>
 @{
     ViewData["Title"] = "Staff & Users Management";
     string currentRoleFilter = ViewBag.RoleFilter as string ?? "All";
@@ -68,7 +68,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (!Model.Any())
+                        @if (!Model.Items.Any())
                         {
                             <tr id="emptyRow">
                                 <td colspan="6" class="text-center py-5 text-muted">
@@ -79,7 +79,7 @@
                         }
                         else
                         {
-                            @foreach (var user in Model)
+                            @foreach (var user in Model.Items)
                             {
                                 string roleBadgeClass = user.Role switch
                                 {
@@ -176,6 +176,7 @@
                     </tbody>
                 </table>
             </div>
+            <partial name="_Pagination" model="Model" />
         </div>
     </div>
 </div>

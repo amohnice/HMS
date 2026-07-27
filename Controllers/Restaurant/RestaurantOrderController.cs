@@ -5,25 +5,31 @@ using System.Security.Claims;
 using HMS.Data;
 using HMS.Models;
 using HMS.Models.Restaurant;
-using HMS.Models.ViewModels;
+using HMS.Services;
 
 namespace HMS.Controllers.Restaurant;
 
 [Authorize(Roles = "Admin,Manager,Waiter")]
 public class RestaurantOrderController : Controller
 {
+    private readonly IRestaurantOrderService _orderService;
+    private readonly IRestaurantMenuService _menuService;
     private readonly ApplicationDbContext _context;
 
-    public RestaurantOrderController(ApplicationDbContext context) => _context = context;
-
-    public async Task<IActionResult> Index()
+    public RestaurantOrderController(
+        IRestaurantOrderService orderService,
+        IRestaurantMenuService menuService,
+        ApplicationDbContext context)
     {
-        var orders = await _context.RestaurantOrders
-            .Include(o => o.Table)
-            .Include(o => o.Waiter)
-            .Include(o => o.Items).ThenInclude(i => i.MenuItem)
-            .OrderByDescending(o => o.OrderTime)
-            .ToListAsync();
+        _orderService = orderService;
+        _menuService = menuService;
+        _context = context;
+    }
+
+    public async Task<IActionResult> Index(RestaurantOrderStatus? statusFilter, int page = 1, int pageSize = 10)
+    {
+        ViewBag.StatusFilter = statusFilter;
+        var orders = await _orderService.GetPaginatedOrdersAsync(page, pageSize, statusFilter);
         return View(orders);
     }
 
@@ -33,11 +39,8 @@ public class RestaurantOrderController : Controller
             .Where(t => t.Status == TableStatus.Available || t.Status == TableStatus.Occupied)
             .OrderBy(t => t.TableNumber)
             .ToListAsync();
-        ViewBag.MenuItems = await _context.RestaurantMenus
-            .Where(m => m.IsAvailable)
-            .OrderBy(m => m.Category)
-            .ThenBy(m => m.Name)
-            .ToListAsync();
+
+        ViewBag.MenuItems = await _menuService.GetAvailableMenuItemsAsync();
         return View();
     }
 
@@ -45,65 +48,22 @@ public class RestaurantOrderController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(int tableId, string? customerName, string? notes, int[] menuItemIds, int[] quantities)
     {
-        if (menuItemIds == null || menuItemIds.Length == 0)
-        {
-            TempData["ErrorMessage"] = "Add at least one menu item.";
-            return RedirectToAction(nameof(Create));
-        }
-
-        var table = await _context.RestaurantTables.FindAsync(tableId);
-        if (table == null) return NotFound();
-
         var waiterId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var order = new RestaurantOrder
-        {
-            TableId = tableId,
-            WaiterId = waiterId,
-            CustomerName = customerName,
-            Notes = notes,
-            Status = RestaurantOrderStatus.Pending,
-            OrderTime = DateTime.Now
-        };
+        var (success, errorMessage, order) = await _orderService.CreateOrderAsync(tableId, waiterId, customerName, notes, menuItemIds, quantities);
 
-        decimal total = 0;
-        for (int i = 0; i < menuItemIds.Length; i++)
+        if (!success)
         {
-            if (quantities[i] <= 0) continue;
-            var menuItem = await _context.RestaurantMenus.FindAsync(menuItemIds[i]);
-            if (menuItem == null || !menuItem.IsAvailable) continue;
-
-            order.Items.Add(new RestaurantOrderItem
-            {
-                MenuItemId = menuItem.Id,
-                Quantity = quantities[i],
-                UnitPrice = menuItem.Price
-            });
-            total += menuItem.Price * quantities[i];
-        }
-
-        if (!order.Items.Any())
-        {
-            TempData["ErrorMessage"] = "No valid items in order.";
+            TempData["ErrorMessage"] = errorMessage;
             return RedirectToAction(nameof(Create));
         }
 
-        order.TotalAmount = total;
-        table.Status = TableStatus.Occupied;
-
-        _context.RestaurantOrders.Add(order);
-        await _context.SaveChangesAsync();
-
-        TempData["SuccessMessage"] = $"Order #{order.Id} submitted to kitchen.";
+        TempData["SuccessMessage"] = $"Order #{order!.Id} submitted to kitchen.";
         return RedirectToAction(nameof(Index));
     }
 
     public async Task<IActionResult> Details(int id)
     {
-        var order = await _context.RestaurantOrders
-            .Include(o => o.Table)
-            .Include(o => o.Waiter)
-            .Include(o => o.Items).ThenInclude(i => i.MenuItem)
-            .FirstOrDefaultAsync(o => o.Id == id);
+        var order = await _orderService.GetOrderByIdAsync(id);
         return order == null ? NotFound() : View(order);
     }
 }

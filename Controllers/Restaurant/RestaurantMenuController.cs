@@ -1,26 +1,28 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
-using HMS.Data;
+using HMS.Models;
 using HMS.Models.Restaurant;
+using HMS.Services;
 
 namespace HMS.Controllers.Restaurant;
 
 [Authorize(Roles = "Admin,Manager")]
 public class RestaurantMenuController : Controller
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IRestaurantMenuService _menuService;
 
-    public RestaurantMenuController(ApplicationDbContext context) => _context = context;
-
-    public async Task<IActionResult> Index(string? search)
+    public RestaurantMenuController(IRestaurantMenuService menuService)
     {
-        var query = _context.RestaurantMenus.AsQueryable();
-        if (!string.IsNullOrWhiteSpace(search))
-            query = query.Where(m => m.Name.Contains(search) || m.Category.ToString().Contains(search));
+        _menuService = menuService;
+    }
 
+    public async Task<IActionResult> Index(string? search, RestaurantMenuCategory? category, int page = 1, int pageSize = 10)
+    {
         ViewBag.Search = search;
-        return View(await query.OrderBy(m => m.Category).ThenBy(m => m.Name).ToListAsync());
+        ViewBag.CategoryFilter = category;
+
+        var menus = await _menuService.GetPaginatedMenusAsync(page, pageSize, search, category);
+        return View(menus);
     }
 
     public IActionResult Create() => View();
@@ -31,9 +33,7 @@ public class RestaurantMenuController : Controller
     {
         if (ModelState.IsValid)
         {
-            menu.CreatedAt = DateTime.Now;
-            _context.RestaurantMenus.Add(menu);
-            await _context.SaveChangesAsync();
+            await _menuService.CreateMenuAsync(menu);
             TempData["SuccessMessage"] = "Menu item added.";
             return RedirectToAction(nameof(Index));
         }
@@ -42,7 +42,7 @@ public class RestaurantMenuController : Controller
 
     public async Task<IActionResult> Edit(int id)
     {
-        var menu = await _context.RestaurantMenus.FindAsync(id);
+        var menu = await _menuService.GetMenuByIdAsync(id);
         return menu == null ? NotFound() : View(menu);
     }
 
@@ -53,8 +53,9 @@ public class RestaurantMenuController : Controller
         if (id != menu.Id) return NotFound();
         if (ModelState.IsValid)
         {
-            _context.Update(menu);
-            await _context.SaveChangesAsync();
+            var success = await _menuService.UpdateMenuAsync(menu);
+            if (!success) return NotFound();
+
             TempData["SuccessMessage"] = "Menu item updated.";
             return RedirectToAction(nameof(Index));
         }
@@ -63,7 +64,7 @@ public class RestaurantMenuController : Controller
 
     public async Task<IActionResult> Delete(int id)
     {
-        var menu = await _context.RestaurantMenus.FindAsync(id);
+        var menu = await _menuService.GetMenuByIdAsync(id);
         return menu == null ? NotFound() : View(menu);
     }
 
@@ -71,11 +72,9 @@ public class RestaurantMenuController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
-        var menu = await _context.RestaurantMenus.FindAsync(id);
-        if (menu != null)
+        var success = await _menuService.DeleteMenuAsync(id);
+        if (success)
         {
-            _context.RestaurantMenus.Remove(menu);
-            await _context.SaveChangesAsync();
             TempData["SuccessMessage"] = "Menu item deleted.";
         }
         return RedirectToAction(nameof(Index));

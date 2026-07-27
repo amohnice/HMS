@@ -1,4 +1,4 @@
-@model IEnumerable<HMS.Models.Shop.ShopProduct>
+@model HMS.Models.Common.PagedList<HMS.Models.Shop.ShopProduct>
 @{
     ViewData["Title"] = "Shop Products Inventory";
 }
@@ -50,7 +50,7 @@
                 </tr>
             </thead>
             <tbody>
-                @if (!Model.Any())
+                @if (!Model.Items.Any())
                 {
                     <tr>
                         <td colspan="8" class="text-center py-5 text-muted">
@@ -61,7 +61,7 @@
                 }
                 else
                 {
-                    foreach (var p in Model)
+                    foreach (var p in Model.Items)
                     {
                         var lowStock = p.StockQuantity <= 10;
                         <tr>
@@ -105,4 +105,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_Pagination" model="Model" />
 </div>

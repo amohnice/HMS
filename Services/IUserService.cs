@@ -9,6 +9,7 @@ public interface IUserService
     string HashPassword(string password);
 
     Task<List<User>> GetAllUsersAsync(string? search = null, string? roleFilter = null);
+    Task<HMS.Models.Common.PagedList<User>> GetPaginatedUsersAsync(int page, int pageSize, string? search = null, string? roleFilter = null);
     Task<User?> GetUserByIdAsync(int id);
     Task<User?> GetUserByEmailAsync(string email);
     Task<(bool Success, string Password, string ErrorMessage)> CreateUserWithCredentialsAsync(User user, string? customPassword = null);

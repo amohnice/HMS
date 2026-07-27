@@ -1,4 +1,4 @@
-@model IEnumerable<HMS.Models.Restaurant.RestaurantMenu>
+@model HMS.Models.Common.PagedList<HMS.Models.Restaurant.RestaurantMenu>
 @{
     ViewData["Title"] = "Restaurant Menu";
 }
@@ -34,7 +34,7 @@
     </div>
 </div>
 
-@if (!Model.Any())
+@if (!Model.Items.Any())
 {
     <div class="text-center py-5">
         <svg class="text-muted mb-3" width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V4a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
@@ -44,7 +44,7 @@
 }
 else
 {
-    var categories = Model.GroupBy(m => m.Category);
+    var categories = Model.Items.GroupBy(m => m.Category);
     foreach (var categoryGroup in categories)
     {
         <div class="mb-5">
@@ -83,4 +83,8 @@ else
             </div>
         </div>
     }
+
+    <div class="card shadow-sm mt-4">
+        <partial name="_Pagination" model="Model" />
+    </div>
 }

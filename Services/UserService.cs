@@ -34,6 +34,18 @@ public class UserService : IUserService
 
     public async Task<List<User>> GetAllUsersAsync(string? search = null, string? roleFilter = null)
     {
+        var query = GetUsersQuery(search, roleFilter);
+        return await query.ToListAsync();
+    }
+
+    public async Task<HMS.Models.Common.PagedList<User>> GetPaginatedUsersAsync(int page, int pageSize, string? search = null, string? roleFilter = null)
+    {
+        var query = GetUsersQuery(search, roleFilter);
+        return await HMS.Models.Common.PagedList<User>.CreateAsync(query, page, pageSize);
+    }
+
+    private IQueryable<User> GetUsersQuery(string? search, string? roleFilter)
+    {
         var query = _context.Users.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -47,7 +59,7 @@ public class UserService : IUserService
             query = query.Where(u => u.Role == roleFilter);
         }
 
-        return await query.OrderByDescending(u => u.RegisteredAt).ToListAsync();
+        return query.OrderByDescending(u => u.RegisteredAt);
     }
 
     public async Task<User?> GetUserByIdAsync(int id)

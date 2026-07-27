@@ -17,13 +17,13 @@ public class UserController : Controller
         _userService = userService;
     }
 
-    public async Task<IActionResult> Index(string? search, string? roleFilter)
+    public async Task<IActionResult> Index(string? search, string? roleFilter, int page = 1, int pageSize = 10)
     {
         ViewBag.Search = search;
         ViewBag.RoleFilter = roleFilter ?? "All";
         ViewBag.AvailableRoles = new[] { "All", "SuperAdmin", "Admin", "Manager", "Waiter", "Kitchen", "Cashier", "ShopCashier" };
 
-        var users = await _userService.GetAllUsersAsync(search, roleFilter);
+        var users = await _userService.GetPaginatedUsersAsync(page, pageSize, search, roleFilter);
         return View(users);
     }
 
