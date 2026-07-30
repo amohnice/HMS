@@ -1554,9 +1554,22 @@ html, body {
     flex-direction: row;
 }
 
+/* Waiter has no sidebar — its top bar must stack ABOVE the content, not beside it */
+.app-shell.pos-mode.waiter-mode {
+    flex-direction: column;
+}
+
 /* POS Sidebar - Desktop only */
 .pos-sidebar {
     display: none;
+}
+
+/* Below 992px the POS sidebar is hidden and the mobile top bar takes over,
+   so the shell must stack vertically or the top bar squeezes the content away. */
+@media (max-width: 991.98px) {
+    .app-shell.pos-mode {
+        flex-direction: column;
+    }
 }
 
 @media (min-width: 992px) {
@@ -1701,6 +1714,8 @@ html, body {
 
 .pos-content {
     flex: 1;
+    min-height: 0;  /* allow scrolling when the shell stacks vertically */
+    min-width: 0;
     overflow-y: auto;
     padding: 20px;
     display: flex;
