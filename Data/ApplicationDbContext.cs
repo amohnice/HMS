@@ -20,10 +20,24 @@ public class ApplicationDbContext : DbContext
     public DbSet<ShopProduct> ShopProducts { get; set; }
     public DbSet<ShopSale> ShopSales { get; set; }
     public DbSet<ShopSaleItem> ShopSaleItems { get; set; }
+    public DbSet<StockMovement> StockMovements { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<StockMovement>(e =>
+        {
+            e.HasOne(m => m.Product)
+                .WithMany()
+                .HasForeignKey(m => m.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(m => m.PerformedByUser)
+                .WithMany()
+                .HasForeignKey(m => m.PerformedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
 
         modelBuilder.Entity<RestaurantMenu>(e =>
         {

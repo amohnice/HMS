@@ -44,6 +44,7 @@ public class RestaurantReportViewModel
     public int TotalOrders { get; set; }
     public List<TopItemRow> TopItems { get; set; } = new();
     public List<TopWaiterRow> TopWaiters { get; set; } = new();
+    public List<ChartDataPoint> HourlySalesChart { get; set; } = new();
     public ReportFilterViewModel Filter { get; set; } = new();
 }
 
@@ -53,7 +54,17 @@ public class ShopReportViewModel
     public int TotalSales { get; set; }
     public List<TopItemRow> TopProducts { get; set; } = new();
     public List<ShopProduct> LowStockProducts { get; set; } = new();
+    public List<ChartDataPoint> DailySalesChart { get; set; } = new();
+    public int HealthyStockCount { get; set; }
+    public int LowStockCount { get; set; }
+    public int OutOfStockCount { get; set; }
     public ReportFilterViewModel Filter { get; set; } = new();
+}
+
+public class ChartDataPoint
+{
+    public string Label { get; set; } = string.Empty;
+    public decimal Value { get; set; }
 }
 
 public class TopItemRow

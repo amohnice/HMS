@@ -54,6 +54,16 @@ public class RestaurantReportController : Controller
                 })
                 .OrderByDescending(x => x.Revenue)
                 .Take(10)
+                .ToList(),
+            HourlySalesChart = orders
+                .Where(o => o.PaidAt.HasValue)
+                .GroupBy(o => o.PaidAt!.Value.Hour)
+                .Select(g => new ChartDataPoint
+                {
+                    Label = $"{g.Key:00}:00",
+                    Value = g.Sum(o => o.TotalAmount)
+                })
+                .OrderBy(x => x.Label)
                 .ToList()
         };
 

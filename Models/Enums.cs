@@ -38,3 +38,12 @@ public enum ShopSaleStatus
     Completed,
     Refunded
 }
+
+public enum StockMovementType
+{
+    Sale,
+    Restock,
+    ManualAdjustment,
+    DamageSpoilage,
+    Return
+}

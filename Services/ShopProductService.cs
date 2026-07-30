@@ -91,4 +91,44 @@ public class ShopProductService : IShopProductService
             .OrderBy(p => p.StockQuantity)
             .ToListAsync();
     }
+
+    public async Task<bool> AdjustStockAsync(int productId, int deltaQuantity, HMS.Models.StockMovementType type, string? reason, int? userId)
+    {
+        var product = await _context.ShopProducts.FindAsync(productId);
+        if (product == null) return false;
+
+        product.StockQuantity += deltaQuantity;
+        if (product.StockQuantity < 0) product.StockQuantity = 0;
+
+        _context.StockMovements.Add(new StockMovement
+        {
+            ProductId = productId,
+            QuantityDelta = deltaQuantity,
+            MovementType = type,
+            Reason = reason,
+            PerformedByUserId = userId,
+            Timestamp = DateTime.Now
+        });
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<PagedList<StockMovement>> GetPaginatedAuditTrailAsync(int page, int pageSize, int? productId = null, HMS.Models.StockMovementType? typeFilter = null)
+    {
+        var query = _context.StockMovements
+            .AsNoTracking()
+            .Include(m => m.Product)
+            .Include(m => m.PerformedByUser)
+            .AsQueryable();
+
+        if (productId.HasValue)
+            query = query.Where(m => m.ProductId == productId.Value);
+
+        if (typeFilter.HasValue)
+            query = query.Where(m => m.MovementType == typeFilter.Value);
+
+        query = query.OrderByDescending(m => m.Timestamp);
+        return await PagedList<StockMovement>.CreateAsync(query, page, pageSize);
+    }
 }

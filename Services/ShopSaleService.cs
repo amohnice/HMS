@@ -71,6 +71,16 @@ public class ShopSaleService : IShopSaleService
                 });
                 subTotal += product.Price * quantities[i];
                 product.StockQuantity -= quantities[i];
+
+                _context.StockMovements.Add(new StockMovement
+                {
+                    ProductId = product.Id,
+                    QuantityDelta = -quantities[i],
+                    MovementType = StockMovementType.Sale,
+                    Reason = "POS Sale",
+                    PerformedByUserId = cashierId,
+                    Timestamp = DateTime.Now
+                });
             }
 
             if (!sale.Items.Any())

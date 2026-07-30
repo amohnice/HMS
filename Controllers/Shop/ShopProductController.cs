@@ -76,4 +76,33 @@ public class ShopProductController : Controller
         }
         return RedirectToAction(nameof(Index));
     }
+
+    public async Task<IActionResult> AuditTrail(int? productId, HMS.Models.StockMovementType? typeFilter, int page = 1, int pageSize = 15)
+    {
+        ViewBag.ProductId = productId;
+        ViewBag.TypeFilter = typeFilter;
+        ViewBag.Products = await _productService.GetAllActiveProductsAsync();
+
+        var movements = await _productService.GetPaginatedAuditTrailAsync(page, pageSize, productId, typeFilter);
+        return View(movements);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AdjustStock(int productId, int quantityDelta, HMS.Models.StockMovementType movementType, string? reason)
+    {
+        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        int? userId = int.TryParse(userIdStr, out int parsedId) ? parsedId : null;
+
+        var success = await _productService.AdjustStockAsync(productId, quantityDelta, movementType, reason, userId);
+        if (success)
+        {
+            TempData["SuccessMessage"] = "Stock adjustment logged successfully.";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = "Failed to adjust stock.";
+        }
+        return RedirectToAction(nameof(AuditTrail));
+    }
 }
