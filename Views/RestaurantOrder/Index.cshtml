@@ -1,81 +1,115 @@
 @model HMS.Models.Common.PagedList<HMS.Models.Restaurant.RestaurantOrder>
 @using HMS.Models
+@using HMS.Models.ViewModels
+@using HMS.Services.Ui
 @{
     ViewData["Title"] = "Restaurant Orders";
+
+    var active = ViewBag.StatusFilter as RestaurantOrderStatus?;
+    var counts = ViewBag.StatusCounts as Dictionary<RestaurantOrderStatus, int> ?? [];
+    @* This controller is waiter/admin only, so order details is always reachable here. *@
+    var live = new OrderQueue
+    {
+        Orders = ViewBag.LiveOrders as List<HMS.Models.Restaurant.RestaurantOrder> ?? [],
+        HrefFormat = "/RestaurantOrder/Details/{0}"
+    };
+
+    @* Chips replace what used to be separate pages for the same records. *@
+    var chips = new List<FilterChip>
+    {
+        new()
+        {
+            Label = "All",
+            Count = counts.Values.Sum(),
+            Href = Url.Action("Index")!,
+            IsActive = active is null
+        }
+    };
+
+    foreach (var status in Enum.GetValues<RestaurantOrderStatus>())
+    {
+        chips.Add(new FilterChip
+        {
+            Label = status.ToString(),
+            Count = counts.TryGetValue(status, out var n) ? n : 0,
+            Href = Url.Action("Index", new { statusFilter = status })!,
+            IsActive = active == status
+        });
+    }
+
+    var head = new SurfaceHead
+    {
+        Title = active is null ? "Orders" : $"{active} Orders",
+        Count = Model.TotalCount.ToString(),
+        Actions =
+        [
+            new SurfaceAction
+            {
+                Label = "Take Order", Icon = "plus",
+                Href = Url.Action("Create")!,
+                Css = "btn btn-primary btn-sm"
+            }
+        ]
+    };
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-heading">Orders</h1>
-        <p class="page-subheading">Take orders, track prep status, and view history</p>
-    </div>
-    <div>
-        <a asp-action="Create" class="btn btn-primary d-inline-flex align-items-center">
-            <svg class="me-2" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            Take Order
-        </a>
-    </div>
-</div>
+<partial name="_SurfaceHead" model="head" />
 
-<div class="card shadow-sm">
-    <div class="card-header bg-white border-0">
-        <h5 class="mb-0 fw-bold">Recent Orders</h5>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th class="ps-4">Order ID</th>
-                    <th>Time</th>
-                    <th>Table</th>
-                    <th>Customer</th>
-                    <th>Waiter</th>
-                    <th>Status</th>
-                    <th class="text-end">Total</th>
-                    <th class="text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (!Model.Items.Any())
-                {
+@* What is on the floor right now, before the history table. *@
+<partial name="_OrderQueue" model="live" />
+
+<partial name="_FilterChips" model="chips" />
+
+@if (!Model.Items.Any())
+{
+    <partial name="_EmptyState" model="@(new EmptyState
+    {
+        Icon = "list",
+        Title = active is null ? "No orders yet" : $"No {active} orders",
+        Text = "Orders appear here as waiters take them.",
+        Action = new SurfaceAction
+        {
+            Label = "Take Order", Icon = "plus",
+            Href = Url.Action("Create")!
+        }
+    })" />
+}
+else
+{
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover table-cards mb-0">
+                <thead>
                     <tr>
-                        <td colspan="8" class="text-center py-5 text-muted">
-                            <svg class="mb-3" width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                            <p class="mb-0">No orders found.</p>
-                        </td>
+                        <th class="ps-4">Order</th>
+                        <th>Time</th>
+                        <th>Table</th>
+                        <th>Customer</th>
+                        <th>Waiter</th>
+                        <th>Status</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-center">Actions</th>
                     </tr>
-                }
-                else
-                {
-                    foreach (var order in Model.Items)
+                </thead>
+                <tbody>
+                    @foreach (var order in Model.Items)
                     {
-                        var statusClass = order.Status switch
-                        {
-                            RestaurantOrderStatus.Pending => "order-pending",
-                            RestaurantOrderStatus.Preparing => "order-preparing",
-                            RestaurantOrderStatus.Ready => "order-ready",
-                            RestaurantOrderStatus.Served => "order-served",
-                            RestaurantOrderStatus.Paid => "order-paid",
-                            RestaurantOrderStatus.Cancelled => "order-cancelled",
-                            _ => ""
-                        };
-
                         <tr>
-                            <td class="ps-4 fw-bold">#@order.Id</td>
-                            <td>@order.OrderTime.ToString("yyyy-MM-dd HH:mm")</td>
-                            <td><span class="badge bg-secondary">Table @order.Table?.TableNumber</span></td>
-                            <td>@(string.IsNullOrWhiteSpace(order.CustomerName) ? "Guest" : order.CustomerName)</td>
-                            <td>@order.Waiter?.FullName</td>
-                            <td><span class="badge-status @statusClass">@order.Status</span></td>
-                            <td class="text-end fw-bold text-primary">Ksh @order.TotalAmount.ToString("N2")</td>
-                            <td class="text-center">
-                                <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-outline-secondary py-1 px-3">Details</a>
+                            <td class="ps-4 fw-bold">#@order.Id.ToString("D4")</td>
+                            <td data-label="Time">@order.OrderTime.ToString("dd MMM HH:mm")</td>
+                            <td data-label="Table">Table @order.Table?.TableNumber</td>
+                            <td data-label="Customer">@(string.IsNullOrWhiteSpace(order.CustomerName) ? "Guest" : order.CustomerName)</td>
+                            <td data-label="Waiter">@order.Waiter?.FullName</td>
+                            <td data-label="Status"><partial name="_StatusPill" model="StatusStyle.From(order.Status)" /></td>
+                            <td data-label="Total" class="text-end fw-semibold">Ksh @order.TotalAmount.ToString("N0")</td>
+                            <td data-label="Actions" class="text-center">
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@order.Id">Details</a>
                             </td>
                         </tr>
                     }
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
+        <partial name="_Pagination" model="Model" />
     </div>
-    <partial name="_Pagination" model="Model" />
-</div>
+}

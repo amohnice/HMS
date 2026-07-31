@@ -1,0 +1,6 @@
+@*
+    Build the model with HMS.Services.Ui.StatusStyle.From(...) so the
+    state-to-colour mapping stays in one place.
+*@
+@model HMS.Models.ViewModels.StatusPill
+<span class="badge-status @Model.Css">@Model.Text</span>

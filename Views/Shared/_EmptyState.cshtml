@@ -1,0 +1,22 @@
+@model HMS.Models.ViewModels.EmptyState
+
+<div class="empty-state">
+    <span class="empty-state-icon"><partial name="_Icon" model="@Model.Icon" /></span>
+    <div class="empty-state-title">@Model.Title</div>
+    @if (Model.Text is not null)
+    {
+        <div class="empty-state-text">@Model.Text</div>
+    }
+    @if (Model.Action is not null)
+    {
+        <a class="@Model.Action.Css" href="@Model.Action.Href"
+           @(Model.Action.OpensDrawer ? "data-drawer" : null)
+           data-drawer-title="@Model.Action.DrawerTitle">
+            @if (Model.Action.Icon is not null)
+            {
+                <partial name="_Icon" model="@Model.Action.Icon" />
+            }
+            @Model.Action.Label
+        </a>
+    }
+</div>

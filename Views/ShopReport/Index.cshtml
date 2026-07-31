@@ -1,167 +1,134 @@
 @model HMS.Models.ViewModels.ShopReportViewModel
+@using HMS.Models.ViewModels
+@using HMS.Services.Ui
 @{
     ViewData["Title"] = "Shop Sales Report";
+    var periods = new[] { "daily", "weekly", "monthly" };
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h2 mb-0 fw-bold">Shop Reports</h1>
-        <p class="text-muted mb-0">Analyze revenue trend, low stock inventory warning flags, and sales leaders</p>
-    </div>
-    <div>
-        <a asp-action="ExportCsv" asp-route-Period="@Model.Filter.Period" asp-route-StartDate="@Model.Filter.StartDate" asp-route-EndDate="@Model.Filter.EndDate" class="btn btn-outline-primary d-inline-flex align-items-center">
-            <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-            Export CSV
+<partial name="_SurfaceHead" model="@(new SurfaceHead
+{
+    Title = "Shop Reports",
+    Actions =
+    [
+        new SurfaceAction
+        {
+            Label = "Export CSV",
+            Href = Url.Action("ExportCsv", new { Model.Filter.Period, Model.Filter.StartDate, Model.Filter.EndDate })!,
+            Css = "btn btn-secondary btn-sm"
+        }
+    ]
+})" />
+
+<div class="chip-row">
+    @foreach (var period in periods)
+    {
+        <a class="chip @(string.Equals(Model.Filter.Period, period, StringComparison.OrdinalIgnoreCase) ? "is-active" : "")"
+           asp-action="Index" asp-route-Period="@period">
+            @(char.ToUpper(period[0]) + period[1..])
         </a>
+    }
+</div>
+
+<form class="filter-bar" method="get">
+    <input type="hidden" name="Period" value="@Model.Filter.Period" />
+    <div class="filter-field">
+        <label for="startDate">From</label>
+        <input id="startDate" type="date" name="StartDate" value="@Model.Filter.StartDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="filter-field">
+        <label for="endDate">To</label>
+        <input id="endDate" type="date" name="EndDate" value="@Model.Filter.EndDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+</form>
+
+<div class="kpi-strip">
+    <div class="kpi">
+        <span class="kpi-label">Retail revenue</span>
+        <span class="kpi-value">Ksh @Model.TotalRevenue.ToString("N0")</span>
+        <span class="kpi-sub">Shop sales in range</span>
+    </div>
+    <div class="kpi">
+        <span class="kpi-label">Transactions</span>
+        <span class="kpi-value">@Model.TotalSales</span>
+        <span class="kpi-sub">Tickets processed</span>
+    </div>
+    <div class="kpi">
+        <span class="kpi-label">Average ticket</span>
+        <span class="kpi-value">
+            Ksh @((Model.TotalSales == 0 ? 0 : Model.TotalRevenue / Model.TotalSales).ToString("N0"))
+        </span>
+        <span class="kpi-sub">Per sale</span>
     </div>
 </div>
 
-<!-- Filters -->
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label small fw-bold">Reporting Period</label>
-                <select name="Period" class="form-select" onchange="this.form.submit()">
-                    @foreach (var period in new[] { "daily", "weekly", "monthly" })
-                    {
-                        if (Model.Filter.Period?.ToLower() == period)
-                        {
-                            <option value="@period" selected>@period.Substring(0, 1).ToUpper()@period.Substring(1)</option>
-                        }
-                        else
-                        {
-                            <option value="@period">@period.Substring(0, 1).ToUpper()@period.Substring(1)</option>
-                        }
-                    }
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-bold">Start Date</label>
-                <input type="date" name="StartDate" class="form-control" value="@Model.Filter.StartDate.ToString("yyyy-MM-dd")" />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-bold">End Date</label>
-                <input type="date" name="EndDate" class="form-control" value="@Model.Filter.EndDate.ToString("yyyy-MM-dd")" />
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">Apply Filter</button>
-            </div>
-        </form>
-    </div>
-</div>
+<div class="dash-columns">
+    <section class="card">
+        <header class="dash-panel-head">
+            <h2 class="dash-panel-title">Top selling products</h2>
+        </header>
 
-<!-- Metrics Summary -->
-<div class="row g-4 mb-5">
-    <div class="col-md-6">
-        <div class="card bg-primary text-white border-0 stat-card">
-            <div class="card-body">
-                <span class="text-white-50 small fw-bold uppercase">TOTAL RETAIL REVENUE</span>
-                <h2 class="fw-bold mt-1 mb-0">Ksh @Model.TotalRevenue.ToString("N2")</h2>
-                <div class="small text-white-50 mt-2">Retail shop sales in range</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card bg-success text-white border-0 stat-card">
-            <div class="card-body">
-                <span class="text-white-50 small fw-bold uppercase">TRANSACTIONS COMPLETED</span>
-                <h2 class="fw-bold mt-1 mb-0">@Model.TotalSales</h2>
-                <div class="small text-white-50 mt-2">Point of sale tickets successfully processed</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4">
-    <!-- Top Selling Products -->
-    <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white">
-                <h5 class="mb-0 fw-bold">Top Selling Products</h5>
-            </div>
+        @if (!Model.TopProducts.Any())
+        {
+            <p class="dash-panel-clear">No sales in this period.</p>
+        }
+        else
+        {
             <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table table-cards report-table mb-0">
+                    <thead>
                         <tr>
-                            <th class="ps-3">Product</th>
-                            <th class="text-center">Quantity Sold</th>
-                            <th class="text-end pe-3">Revenue</th>
+                            <th class="ps-4">Product</th>
+                            <th class="text-center">Sold</th>
+                            <th class="text-end pe-4">Revenue</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (!Model.TopProducts.Any())
+                        @foreach (var item in Model.TopProducts)
                         {
                             <tr>
-                                <td colspan="3" class="text-center py-4 text-muted">No sales data for this period.</td>
+                                <td class="ps-4 fw-semibold">@item.Name</td>
+                                <td data-label="Sold" class="text-center">@item.Quantity</td>
+                                <td data-label="Revenue" class="text-end fw-semibold pe-4">Ksh @item.Revenue.ToString("N0")</td>
                             </tr>
-                        }
-                        else
-                        {
-                            foreach (var item in Model.TopProducts)
-                            {
-                                <tr>
-                                    <td class="ps-3 fw-semibold">@item.Name</td>
-                                    <td class="text-center fw-bold">@item.Quantity</td>
-                                    <td class="text-end fw-bold text-primary pe-3">Ksh @item.Revenue.ToString("N0")</td>
-                                </tr>
-                            }
                         }
                     </tbody>
                 </table>
             </div>
-        </div>
-    </div>
+        }
+    </section>
 
-    <!-- Low Stock Alert Grid -->
-    <div class="col-lg-6">
-        <div class="card shadow-sm border-danger h-100">
-            <div class="card-header bg-danger bg-opacity-10 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold text-danger">Low Stock Warnings</h5>
-                <span class="badge bg-danger">Threshold: &le; 10 units</span>
-            </div>
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-3">Product Name</th>
-                            <th>Category</th>
-                            <th class="text-center pe-3">Remaining Stock</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (!Model.LowStockProducts.Any())
-                        {
-                            <tr>
-                                <td colspan="3" class="text-center py-4 text-success fw-bold">
-                                    <svg class="me-1" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    All inventory levels healthy.
-                                </td>
-                            </tr>
-                        }
-                        else
-                        {
-                            foreach (var p in Model.LowStockProducts)
-                            {
-                                <tr>
-                                    <td class="ps-3 fw-semibold">@p.Name</td>
-                                    <td><span class="badge bg-light text-dark">@p.Category</span></td>
-                                    <td class="text-center pe-3">
-                                        @if (p.StockQuantity == 0)
-                                        {
-                                            <span class="badge bg-danger fs-6 px-3 py-1">OUT OF STOCK</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-warning text-dark fs-6 px-3 py-1">@p.StockQuantity remaining</span>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    <section class="card">
+        <header class="dash-panel-head">
+            <h2 class="dash-panel-title">Low stock</h2>
+            <span class="dash-panel-link">&le; 10 units</span>
+        </header>
+
+        @if (!Model.LowStockProducts.Any())
+        {
+            <p class="dash-panel-clear">Every product is above the reorder level.</p>
+        }
+        else
+        {
+            <ul class="dash-list">
+                @foreach (var p in Model.LowStockProducts)
+                {
+                    var pill = StatusStyle.Stock(p.StockQuantity);
+                    <li>
+                        <a class="dash-row" href="@Url.Action("Edit", "ShopProduct", new { id = p.Id })"
+                           data-drawer data-drawer-title="Restock @p.Name">
+                            <span class="dash-row-main">
+                                <span class="dash-row-title">@p.Name</span>
+                                <span class="dash-row-detail">@p.Category</span>
+                            </span>
+                            <span class="dash-row-side">
+                                <partial name="_StatusPill" model="pill" />
+                            </span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
 </div>

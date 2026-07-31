@@ -1,134 +1,155 @@
 @model HMS.Models.Restaurant.RestaurantOrder
 @using HMS.Models
+@using HMS.Models.ViewModels
+@using HMS.Services.Ui
 @{
     ViewData["Title"] = "Collect Payment";
+    var total = Model.TotalAmount;
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-10 col-lg-8">
-        <div class="d-flex align-items-center mb-3">
-            <a asp-action="Index" class="btn btn-sm btn-secondary me-3">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            </a>
-            <h1 class="h3 mb-0 fw-bold">Collect Payment</h1>
-        </div>
+<partial name="_SurfaceHead" model="@(new SurfaceHead
+{
+    Title = $"Order #{Model.Id:D4}",
+    Actions =
+    [
+        new SurfaceAction { Label = "Back to till", Href = Url.Action("Index")!, Css = "btn btn-secondary btn-sm" }
+    ]
+})" />
 
-        <div class="row g-4">
-            <!-- Bill details (Left) -->
-            <div class="col-md-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0 fw-bold">Bill Summary - Order #@Model.Id</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Table:</span>
-                            <span class="fw-bold">Table @(Model.Table?.TableNumber ?? "—")</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Customer:</span>
-                            <span class="fw-bold">@(string.IsNullOrWhiteSpace(Model.CustomerName) ? "Guest" : Model.CustomerName)</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
-                            <span class="text-muted">Waiter:</span>
-                            <span>@(Model.Waiter?.FullName ?? "N/A")</span>
-                        </div>
+<div class="pos-layout">
 
-                        <h6 class="fw-bold mb-2">Items</h6>
-                        <div style="max-height: 200px; overflow-y: auto;">
-                            @foreach (var item in Model.Items)
-                            {
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="small">@item.Quantity &times; @item.MenuItem.Name</span>
-                                    <span class="fw-semibold small">Ksh @item.LineTotal.ToString("N0")</span>
-                                </div>
-                            }
-                        </div>
-
-                        <div class="border-top pt-3 mt-4 d-flex justify-content-between align-items-center">
-                            <span class="fw-bold fs-5">Total Due:</span>
-                            <span class="fw-bold fs-4 text-primary" id="totalDue">Ksh @Model.TotalAmount.ToString("N2")</span>
-                        </div>
-                    </div>
+    @* ---------- The bill ---------- *@
+    <div class="pos-browse">
+        <section class="card bill">
+            <header class="bill-head">
+                <div>
+                    <h2 class="bill-title">Table @(Model.Table?.TableNumber ?? "—")</h2>
+                    <span class="bill-meta">
+                        @(string.IsNullOrWhiteSpace(Model.CustomerName) ? "Guest" : Model.CustomerName)
+                        · served by @(Model.Waiter?.FullName ?? "—")
+                        · @Model.OrderTime.ToString("dd MMM HH:mm")
+                    </span>
                 </div>
+                <partial name="_StatusPill" model="StatusStyle.From(Model.Status)" />
+            </header>
+
+            <div class="bill-lines">
+                @foreach (var item in Model.Items)
+                {
+                    <div class="bill-line">
+                        <span class="bill-line-qty">@item.Quantity&times;</span>
+                        <span class="bill-line-name">@item.MenuItem.Name</span>
+                        <span class="bill-line-unit">@@ Ksh @item.UnitPrice.ToString("N0")</span>
+                        <span class="bill-line-amount">Ksh @item.LineTotal.ToString("N0")</span>
+                    </div>
+                }
             </div>
 
-            <!-- Payment collection (Right) -->
-            <div class="col-md-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0 fw-bold">Payment Details</h5>
-                    </div>
-                    <div class="card-body">
-                        <form asp-action="Pay" method="post" id="payForm">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@Model.Id" />
+            @if (!string.IsNullOrWhiteSpace(Model.Notes))
+            {
+                <p class="bill-note"><strong>Notes:</strong> @Model.Notes</p>
+            }
 
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Payment Method</label>
-                                <select name="paymentMethod" class="form-select" required id="paymentMethodSelect">
-                                    @foreach (PaymentMethod method in Enum.GetValues(typeof(PaymentMethod)))
-                                    {
-                                        <option value="@method">@method</option>
-                                    }
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Amount Tenders (Ksh)</label>
-                                <div class="input-group input-group-lg">
-                                    <span class="input-group-text">Ksh</span>
-                                    <input name="amountPaid" type="number" step="0.01" min="@Model.TotalAmount" class="form-control fw-bold" id="amountPaidInput" placeholder="0.00" value="@Model.TotalAmount" required />
-                                </div>
-                            </div>
-
-                            <div class="bg-light p-3 rounded mb-4 d-flex justify-content-between align-items-center border-start border-3 border-primary">
-                                <div>
-                                    <span class="text-muted small d-block">CHANGE DUE</span>
-                                    <span class="fs-4 fw-bold text-dark" id="changeAmountText">Ksh 0.00</span>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="presetAmount(@Model.TotalAmount)">Exact Amount</button>
-                            </div>
-
-                            <button type="submit" class="btn btn-success btn-lg w-100 fw-bold" id="submitPaymentBtn">Complete Sale</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+            <footer class="bill-total">
+                <span>Total Due</span>
+                <span>Ksh @total.ToString("N0")</span>
+            </footer>
+        </section>
     </div>
+
+    @* ---------- Settlement ---------- *@
+    <form class="cart-rail" asp-action="Pay" method="post" id="payForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+        <input type="hidden" name="paymentMethod" id="paymentMethod" value="@PaymentMethod.Cash" />
+
+        <div class="cart-head">
+            <div class="cart-head-row">
+                <div>
+                    <h2 class="cart-head-title">Take Payment</h2>
+                    <span class="cart-head-meta">@Model.Items.Sum(i => i.Quantity) items</span>
+                </div>
+            </div>
+        </div>
+
+        <hr class="cart-rule" />
+
+        <div class="cart-summary">
+            <div class="cart-summary-row cart-summary-row--total">
+                <span>Total Payable</span>
+                <span>Ksh @total.ToString("N0")</span>
+            </div>
+
+            <div class="cart-summary-row cart-adjust">
+                <label for="amountPaidInput">Tendered</label>
+                <input name="amountPaid" id="amountPaidInput" type="number" step="0.01" min="0"
+                       value="@total.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" required />
+            </div>
+
+            <div class="cart-summary-row cart-change" id="changeRow">
+                <span>Change due</span>
+                <span id="changeText">Ksh 0</span>
+            </div>
+        </div>
+
+        <div class="cart-methods" id="methodRow">
+            @foreach (var method in Enum.GetValues<PaymentMethod>())
+            {
+                <button type="button" class="cart-method @(method == PaymentMethod.Cash ? "is-active" : "")" data-method="@method">
+                    @method
+                </button>
+            }
+        </div>
+
+        <div class="cart-foot">
+            <button type="button" class="btn btn-secondary btn-sm" id="exactBtn">Exact</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="payBtn">Complete Sale</button>
+        </div>
+    </form>
 </div>
 
 @section Scripts {
-    <script>
-        const total = @Model.TotalAmount;
-        const amountInput = document.getElementById('amountPaidInput');
-        const changeText = document.getElementById('changeAmountText');
-        const submitBtn = document.getElementById('submitPaymentBtn');
+<script>
+(function () {
+    'use strict';
 
-        function calculateChange() {
-            const paid = parseFloat(amountInput.value) || 0;
-            const change = paid - total;
+    var total  = @total.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    var paidEl = document.getElementById('amountPaidInput');
+    var row    = document.getElementById('changeRow');
+    var text   = document.getElementById('changeText');
+    var payBtn = document.getElementById('payBtn');
 
-            if (change >= 0) {
-                changeText.innerText = "Ksh " + change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                changeText.classList.remove('text-danger');
-                changeText.classList.add('text-success');
-                submitBtn.disabled = false;
-            } else {
-                changeText.innerText = "Insufficient Amount";
-                changeText.classList.remove('text-success');
-                changeText.classList.add('text-danger');
-                submitBtn.disabled = true;
-            }
-        }
+    function money(n) {
+        return 'Ksh ' + n.toLocaleString('en-KE', { maximumFractionDigits: 0 });
+    }
 
-        function presetAmount(amt) {
-            amountInput.value = amt;
-            calculateChange();
-        }
+    function recalc() {
+        var change = (parseFloat(paidEl.value) || 0) - total;
+        var short = change < 0;
 
-        amountInput.addEventListener('input', calculateChange);
-        window.addEventListener('DOMContentLoaded', calculateChange);
-    </script>
+        text.textContent = short ? 'Short ' + money(-change) : money(change);
+        row.classList.toggle('is-short', short);
+        payBtn.disabled = short;
+    }
+
+    paidEl.addEventListener('input', recalc);
+
+    document.getElementById('exactBtn').addEventListener('click', function () {
+        paidEl.value = total;
+        recalc();
+        paidEl.focus();
+    });
+
+    document.getElementById('methodRow').addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-method]');
+        if (!btn) return;
+        this.querySelectorAll('[data-method]').forEach(function (b) {
+            b.classList.toggle('is-active', b === btn);
+        });
+        document.getElementById('paymentMethod').value = btn.getAttribute('data-method');
+    });
+
+    recalc();
+})();
+</script>
 }

@@ -1,0 +1,42 @@
+@*
+    Horizontal strip of live orders, colour-coded by state — the reference's
+    "Order Line" scroller. Shows what is happening on the floor right now.
+
+    The caller supplies HrefFormat because the right destination depends on the
+    role: order details is waiter/admin only, so kitchen and cashier are sent to
+    their own boards instead of a page they would be denied.
+*@
+@model HMS.Models.ViewModels.OrderQueue
+@using HMS.Models
+@{
+    var live = Model.Orders
+        .Where(o => o.Status != RestaurantOrderStatus.Paid && o.Status != RestaurantOrderStatus.Cancelled)
+        .OrderBy(o => o.OrderTime)
+        .Take(12)
+        .ToList();
+}
+
+@if (live.Count > 0)
+{
+    <div class="queue-strip">
+        @foreach (var order in live)
+        {
+            var href = Model.HrefFor(order.Id);
+            var css = $"queue-card queue-card--{order.Status.ToString().ToLower()}";
+
+            @* Same card either way; only the element changes when there is nowhere to go. *@
+            if (href is null)
+            {
+                <div class="@css">
+                    <partial name="_OrderQueueCard" model="order" />
+                </div>
+            }
+            else
+            {
+                <a class="@css" href="@href">
+                    <partial name="_OrderQueueCard" model="order" />
+                </a>
+            }
+        }
+    </div>
+}

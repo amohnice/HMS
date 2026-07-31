@@ -1,53 +1,46 @@
 @model HMS.Models.Restaurant.RestaurantTable
 @using HMS.Models
+@using HMS.Models.ViewModels
 @{
     ViewData["Title"] = "Create Table";
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-        <div class="d-flex align-items-center mb-3">
-            <a asp-action="Index" class="btn btn-sm btn-secondary me-3">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            </a>
-            <h1 class="h3 mb-0 fw-bold">Create Table</h1>
+<partial name="_SurfaceHead" model="@(new SurfaceHead { Title = "Create Table" })" />
+
+<div class="form-page">
+    <a class="form-back btn btn-sm btn-secondary align-self-start" asp-action="Index">Back to tables</a>
+
+    <form class="form-card" asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="form-field">
+            <label asp-for="TableNumber" class="form-label">Table Number</label>
+            <input asp-for="TableNumber" class="form-control" placeholder="e.g. T4" required />
+            <span asp-validation-for="TableNumber" class="text-danger"></span>
         </div>
 
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <form asp-action="Create" method="post">
-                    @Html.AntiForgeryToken()
-                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-                    <div class="mb-3">
-                        <label asp-for="TableNumber" class="form-label fw-bold">Table Number</label>
-                        <input asp-for="TableNumber" class="form-control" placeholder="e.g., T4" required />
-                        <span asp-validation-for="TableNumber" class="text-danger"></span>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label asp-for="Capacity" class="form-label fw-bold">Capacity (Seats)</label>
-                            <input asp-for="Capacity" type="number" min="1" max="50" class="form-control" placeholder="4" required />
-                            <span asp-validation-for="Capacity" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="Status" class="form-label fw-bold">Status</label>
-                            <select asp-for="Status" asp-items="Html.GetEnumSelectList<HMS.Models.TableStatus>()" class="form-select" required></select>
-                            <span asp-validation-for="Status" class="text-danger"></span>
-                        </div>
-                    </div>
-
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg">Create Table</button>
-                        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-                    </div>
-                </form>
+        <div class="form-row">
+            <div class="form-field">
+                <label asp-for="Capacity" class="form-label">Capacity</label>
+                <input asp-for="Capacity" type="number" min="1" max="50" class="form-control" placeholder="4" required />
+                <span class="form-hint">Seats.</span>
+                <span asp-validation-for="Capacity" class="text-danger"></span>
+            </div>
+            <div class="form-field">
+                <label asp-for="Status" class="form-label">Status</label>
+                <select asp-for="Status" asp-items="Html.GetEnumSelectList<TableStatus>()" class="form-select" required></select>
+                <span asp-validation-for="Status" class="text-danger"></span>
             </div>
         </div>
-    </div>
+
+        <div class="form-actions">
+            <a class="btn btn-secondary btn-sm" asp-action="Index">Cancel</a>
+            <button type="submit" class="btn btn-primary btn-sm">Create Table</button>
+        </div>
+    </form>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }

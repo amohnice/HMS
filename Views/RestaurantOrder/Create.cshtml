@@ -1,218 +1,300 @@
 @using HMS.Models.Restaurant
+@using HMS.Models.ViewModels
 @{
     ViewData["Title"] = "Take Restaurant Order";
+
     var tables = (List<RestaurantTable>)ViewBag.Tables;
     var menuItems = (List<RestaurantMenu>)ViewBag.MenuItems;
+    var categories = menuItems.Select(m => m.Category).Distinct().ToList();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <h1 class="h2 mb-0 fw-bold">New Order</h1>
-        <p class="text-muted mb-0">Select a table and add items to place a new kitchen order</p>
-    </div>
-    <a asp-action="Index" class="btn btn-secondary btn-sm">Back to Orders</a>
-</div>
+<partial name="_SurfaceHead" model="@(new SurfaceHead
+{
+    Title = "New Order",
+    Count = $"{menuItems.Count} dishes",
+    Actions =
+    [
+        new SurfaceAction { Label = "All Orders", Href = Url.Action("Index")!, Css = "btn btn-secondary btn-sm" }
+    ]
+})" />
 
-<div class="pos-container">
-    <!-- Menu Panel (Left) -->
-    <div>
-        <!-- Category Nav -->
-        <ul class="nav nav-pills mb-3" id="menuTabs" role="tablist">
-            <li class="nav-item">
-                <button class="nav-link active" id="all-tab" data-bs-toggle="pill" data-bs-target="#cat-all" type="button">All Items</button>
-            </li>
-            @foreach (var cat in menuItems.Select(m => m.Category).Distinct())
+<div class="pos-layout">
+
+    @* ============ BROWSE ============ *@
+    <div class="pos-browse">
+
+        @* Filtering happens client-side over ONE grid. The previous version
+           rendered the whole grid again per category into hidden tab panes. *@
+        <div class="chip-row" id="dishFilters">
+            <button type="button" class="chip is-active" data-filter="all">
+                All
+                <span class="chip-count">@menuItems.Count</span>
+            </button>
+            @foreach (var category in categories)
             {
-                <li class="nav-item">
-                    <button class="nav-link" id="tab-@cat" data-bs-toggle="pill" data-bs-target="#cat-@cat" type="button">@cat</button>
-                </li>
+                <button type="button" class="chip" data-filter="@category">
+                    @category
+                    <span class="chip-count">@menuItems.Count(m => m.Category == category)</span>
+                </button>
             }
-        </ul>
+        </div>
 
-        <!-- Tab Contents -->
-        <div class="tab-content">
-            <!-- All Items -->
-            <div class="tab-pane fade show active" id="cat-all">
-                <div class="pos-menu-grid">
-                    @foreach (var item in menuItems)
-                    {
-                        <div class="card menu-item-card" onclick="addToCart(@item.Id, '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(item.Name))', @item.Price)">
-                            <div class="card-body p-3">
-                                <span class="badge bg-light text-secondary mb-1">@item.Category</span>
-                                <h6 class="fw-bold mb-1">@item.Name</h6>
-                                <p class="text-muted small mb-2 text-truncate">@item.Description</p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold text-primary">Ksh @item.Price.ToString("N0")</span>
-                                    <span class="btn btn-sm btn-primary icon-action-btn">+</span>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Categorized tabs -->
-            @foreach (var cat in menuItems.Select(m => m.Category).Distinct())
+        <div class="pos-menu-grid" id="dishGrid">
+            @foreach (var item in menuItems)
             {
-                <div class="tab-pane fade" id="cat-@cat">
-                    <div class="pos-menu-grid">
-                        @foreach (var item in menuItems.Where(m => m.Category == cat))
-                        {
-                            <div class="card menu-item-card" onclick="addToCart(@item.Id, '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(item.Name))', @item.Price)">
-                                <div class="card-body p-3">
-                                    <h6 class="fw-bold mb-1">@item.Name</h6>
-                                    <p class="text-muted small mb-2 text-truncate">@item.Description</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="fw-bold text-primary">Ksh @item.Price.ToString("N0")</span>
-                                        <span class="btn btn-sm btn-primary icon-action-btn">+</span>
-                                    </div>
-                                </div>
-                            </div>
-                        }
+                <div class="dish-tile" data-dish="@item.Id" data-category="@item.Category"
+                     data-name="@item.Name" data-price="@item.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                    <span class="dish-tile-kind">@item.Category</span>
+                    <span class="dish-tile-name">@item.Name</span>
+
+                    <div class="dish-tile-foot">
+                        <span class="dish-tile-price">Ksh @item.Price.ToString("N0")</span>
+
+                        @* The stepper lives here, not in the cart: quantity is edited
+                           where you browse and only reviewed in the rail. *@
+                        <span class="stepper">
+                            <button type="button" class="stepper-btn stepper-btn--sub" data-step="-1" aria-label="Remove one @item.Name">&minus;</button>
+                            <span class="stepper-value" data-qty>0</span>
+                            <button type="button" class="stepper-btn stepper-btn--add" data-step="1" aria-label="Add one @item.Name">+</button>
+                        </span>
                     </div>
                 </div>
             }
         </div>
+
+        @if (menuItems.Count == 0)
+        {
+            <partial name="_EmptyState" model="@(new EmptyState
+            {
+                Icon = "book",
+                Title = "No dishes are available",
+                Text = "Menu items must be marked available before they can be ordered."
+            })" />
+        }
     </div>
 
-    <!-- Order Cart Panel (Right) -->
-    <div class="pos-cart-panel shadow-sm">
-        <h5 class="fw-bold mb-3 border-bottom pb-2">Current Cart</h5>
+    @* ============ CART RAIL ============ *@
+    <form class="cart-rail" id="orderForm" asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <div id="cartInputs"></div>
 
-        <form id="orderForm" asp-action="Create" method="post" onsubmit="prepareForm(event)">
-            @Html.AntiForgeryToken()
-            <div id="hiddenInputs"></div>
+        <div class="cart-head">
+            <div class="cart-head-row">
+                <div>
+                    <h2 class="cart-head-title" id="cartTableLabel">Select a table</h2>
+                    <span class="cart-head-meta" id="cartTableMeta"></span>
+                </div>
+                <div class="cart-head-actions">
+                    <button type="button" class="cart-icon-btn" id="cartTableEdit" title="Change table" hidden>
+                        <partial name="_Icon" model="@("plus-doc")" />
+                    </button>
+                    <button type="button" class="cart-icon-btn cart-icon-btn--danger" id="cartClear" title="Clear order">
+                        <partial name="_Icon" model="@("refresh")" />
+                    </button>
+                </div>
+            </div>
 
-            <div class="mb-3">
-                <label class="form-label small fw-bold">Select Table</label>
-                <select name="tableId" class="form-select form-select-sm" required>
-                    <option value="" disabled selected>-- Choose Table --</option>
+            <div class="cart-head-row" id="cartTablePicker">
+                <select name="tableId" class="form-select form-select-sm" id="tableSelect" required>
+                    <option value="" disabled selected>Choose table…</option>
                     @foreach (var table in tables)
                     {
-                        <option value="@table.Id">Table @table.TableNumber (Cap: @table.Capacity) - @table.Status</option>
+                        <option value="@table.Id" data-label="Table @table.TableNumber" data-covers="@table.Capacity">
+                            Table @table.TableNumber · seats @table.Capacity · @table.Status
+                        </option>
                     }
                 </select>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label small fw-bold">Customer Name (Optional)</label>
-                <input name="customerName" type="text" class="form-control form-control-sm" placeholder="e.g. John Doe" />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label small fw-bold">Notes / Requests</label>
-                <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="e.g. No onions, Extra spicy"></textarea>
-            </div>
-
-            <div class="pos-cart-items-header d-flex justify-content-between small fw-bold text-muted border-bottom pb-1 mb-2">
-                <span>Item</span>
-                <span>Qty/Price</span>
-            </div>
-
-            <div class="pos-cart-items" id="cartContainer">
-                <div class="text-center text-muted py-5" id="emptyCartMessage">
-                    Cart is empty. Click items on the left to add.
+            <div class="cart-extras">
+                <button type="button" class="cart-extras-toggle" data-reveal="#cartExtras">＋ Customer &amp; notes</button>
+                <div id="cartExtras" hidden class="cart-extras">
+                    <input name="customerName" type="text" class="form-control form-control-sm" placeholder="Customer name (optional)" />
+                    <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Notes for the kitchen"></textarea>
                 </div>
             </div>
+        </div>
 
-            <div class="border-top pt-3 mt-auto">
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="fw-bold">Total Amount:</span>
-                    <span class="fw-bold text-primary fs-5" id="cartTotal">Ksh 0.00</span>
-                </div>
-                <button type="submit" class="btn btn-primary w-100 btn-lg" id="submitBtn" disabled>Submit Order to Kitchen</button>
+        <hr class="cart-rule" />
+
+        <div class="cart-items">
+            <div class="cart-section-head">
+                <span>Ordered Items</span>
+                <span class="cart-section-count" id="cartCount">00</span>
             </div>
-        </form>
-    </div>
+            <div id="cartLines">
+                <div class="cart-empty">Tap a dish to add it.</div>
+            </div>
+        </div>
+
+        <hr class="cart-rule" />
+
+        <div class="cart-summary">
+            <div class="cart-summary-row">
+                <span>Items</span>
+                <span id="cartQtyTotal">0</span>
+            </div>
+            <div class="cart-summary-row cart-summary-row--total">
+                <span>Total Payable</span>
+                <span id="cartTotal">Ksh 0</span>
+            </div>
+        </div>
+
+        <div class="cart-foot">
+            <a class="btn btn-secondary btn-sm" asp-action="Index">Cancel</a>
+            <button type="submit" class="btn btn-primary btn-sm" id="cartSubmit" disabled>Send to Kitchen</button>
+        </div>
+    </form>
 </div>
 
 @section Scripts {
-    <script>
-        let cart = [];
+<script>
+(function () {
+    'use strict';
 
-        function addToCart(id, name, price) {
-            const existing = cart.find(item => item.id === id);
-            if (existing) {
-                existing.qty++;
-            } else {
-                cart.push({ id, name, price, qty: 1 });
-            }
-            renderCart();
+    var grid   = document.getElementById('dishGrid');
+    var form   = document.getElementById('orderForm');
+    var lines  = document.getElementById('cartLines');
+    var inputs = document.getElementById('cartInputs');
+    var select = document.getElementById('tableSelect');
+
+    // Quantity by dish id. The tiles are the source of truth for editing;
+    // this is just the projection the rail and the POST body read from.
+    var cart = {};
+
+    function money(n) {
+        return 'Ksh ' + n.toLocaleString('en-KE', { maximumFractionDigits: 0 });
+    }
+
+    function tileOf(id) { return grid.querySelector('[data-dish="' + id + '"]'); }
+
+    function setQty(tile, qty) {
+        var id = tile.getAttribute('data-dish');
+        if (qty <= 0) {
+            delete cart[id];
+        } else {
+            cart[id] = {
+                name: tile.getAttribute('data-name'),
+                price: parseFloat(tile.getAttribute('data-price')),
+                qty: qty
+            };
         }
+        tile.querySelector('[data-qty]').textContent = qty;
+        tile.classList.toggle('is-selected', qty > 0);
+        render();
+    }
 
-        function changeQty(id, delta) {
-            const item = cart.find(item => item.id === id);
-            if (item) {
-                item.qty += delta;
-                if (item.qty <= 0) {
-                    cart = cart.filter(x => x.id !== id);
-                }
-                renderCart();
-            }
-        }
+    function render() {
+        var ids = Object.keys(cart);
+        var totalQty = 0, total = 0;
 
-        function renderCart() {
-            const container = document.getElementById('cartContainer');
-            const emptyMessage = document.getElementById('emptyCartMessage');
-            const totalText = document.getElementById('cartTotal');
-            const submitBtn = document.getElementById('submitBtn');
+        if (ids.length === 0) {
+            lines.innerHTML = '<div class="cart-empty">Tap a dish to add it.</div>';
+        } else {
+            lines.innerHTML = '';
+            ids.forEach(function (id) {
+                var line = cart[id];
+                var amount = line.price * line.qty;
+                totalQty += line.qty;
+                total += amount;
 
-            if (cart.length === 0) {
-                container.innerHTML = `<div class="text-center text-muted py-5" id="emptyCartMessage">Cart is empty. Click items on the left to add.</div>`;
-                totalText.innerText = "Ksh 0.00";
-                submitBtn.disabled = true;
-                return;
-            }
-
-            container.innerHTML = '';
-            let total = 0;
-
-            cart.forEach(item => {
-                const subtotal = item.price * item.qty;
-                total += subtotal;
-
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'pos-cart-item';
-                itemDiv.innerHTML = `
-                    <div class="cart-item-name">
-                        <div class="fw-bold text-truncate small">${item.name}</div>
-                        <div class="text-muted small">Ksh ${item.price}</div>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <button type="button" class="btn btn-sm btn-outline-secondary p-1 py-0 me-2" onclick="changeQty(${item.id}, -1)">-</button>
-                        <span class="fw-bold me-2 small cart-qty-pill">${item.qty}</span>
-                        <button type="button" class="btn btn-sm btn-outline-secondary p-1 py-0 me-2" onclick="changeQty(${item.id}, 1)">+</button>
-                        <span class="fw-bold text-primary small">Ksh ${subtotal.toLocaleString()}</span>
-                    </div>
-                `;
-                container.appendChild(itemDiv);
+                var row = document.createElement('div');
+                row.className = 'cart-line';
+                row.innerHTML =
+                    '<span class="cart-line-qty">' + line.qty + '&times;</span>' +
+                    '<span class="cart-line-name"></span>' +
+                    '<span class="cart-line-amount">' + money(amount) + '</span>' +
+                    '<button type="button" class="cart-line-drop" data-drop="' + id + '" aria-label="Remove">&times;</button>';
+                row.querySelector('.cart-line-name').textContent = line.name;  // never trust names into HTML
+                lines.appendChild(row);
             });
-
-            totalText.innerText = "Ksh " + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            submitBtn.disabled = false;
         }
 
-        function prepareForm(event) {
-            event.preventDefault();
-            const form = document.getElementById('orderForm');
-            const hiddenInputs = document.getElementById('hiddenInputs');
-            hiddenInputs.innerHTML = '';
+        document.getElementById('cartCount').textContent = ('0' + ids.length).slice(-2);
+        document.getElementById('cartQtyTotal').textContent = totalQty;
+        document.getElementById('cartTotal').textContent = money(total);
+        document.getElementById('cartSubmit').disabled = ids.length === 0 || !select.value;
+    }
 
-            cart.forEach(item => {
-                const idInput = document.createElement('input');
-                idInput.type = 'hidden';
-                idInput.name = 'menuItemIds';
-                idInput.value = item.id;
-                hiddenInputs.appendChild(idInput);
+    // --- Stepper on the tiles ---
+    grid?.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-step]');
+        if (!btn) return;
+        var tile = btn.closest('[data-dish]');
+        var current = parseInt(tile.querySelector('[data-qty]').textContent, 10) || 0;
+        setQty(tile, current + parseInt(btn.getAttribute('data-step'), 10));
+    });
 
-                const qtyInput = document.createElement('input');
-                qtyInput.type = 'hidden';
-                qtyInput.name = 'quantities';
-                qtyInput.value = item.qty;
-                hiddenInputs.appendChild(qtyInput);
-            });
+    // --- Remove from the rail ---
+    lines.addEventListener('click', function (e) {
+        var drop = e.target.closest('[data-drop]');
+        if (drop) setQty(tileOf(drop.getAttribute('data-drop')), 0);
+    });
 
-            form.submit();
+    // --- Category filter over the single grid ---
+    document.getElementById('dishFilters')?.addEventListener('click', function (e) {
+        var chip = e.target.closest('[data-filter]');
+        if (!chip) return;
+        var want = chip.getAttribute('data-filter');
+
+        this.querySelectorAll('[data-filter]').forEach(function (c) {
+            c.classList.toggle('is-active', c === chip);
+        });
+        grid.querySelectorAll('[data-dish]').forEach(function (tile) {
+            tile.hidden = want !== 'all' && tile.getAttribute('data-category') !== want;
+        });
+    });
+
+    // --- Table choice collapses into the header ---
+    function applyTable() {
+        var opt = select.selectedOptions[0];
+        var picker = document.getElementById('cartTablePicker');
+        var editBtn = document.getElementById('cartTableEdit');
+
+        if (!select.value || !opt) return;
+
+        document.getElementById('cartTableLabel').textContent = opt.getAttribute('data-label');
+        document.getElementById('cartTableMeta').textContent = 'Seats ' + opt.getAttribute('data-covers');
+        picker.hidden = true;
+        editBtn.hidden = false;
+        render();
+    }
+
+    select?.addEventListener('change', applyTable);
+
+    document.getElementById('cartTableEdit')?.addEventListener('click', function () {
+        document.getElementById('cartTablePicker').hidden = false;
+        this.hidden = true;
+    });
+
+    // --- Clear ---
+    document.getElementById('cartClear')?.addEventListener('click', function () {
+        Object.keys(cart).forEach(function (id) {
+            var tile = tileOf(id);
+            if (tile) {
+                tile.querySelector('[data-qty]').textContent = '0';
+                tile.classList.remove('is-selected');
+            }
+        });
+        cart = {};
+        render();
+    });
+
+    // --- Submit: expand the cart into the array pairs the action expects ---
+    form.addEventListener('submit', function (e) {
+        if (Object.keys(cart).length === 0) {
+            e.preventDefault();
+            return;
         }
-    </script>
+        inputs.innerHTML = '';
+        Object.keys(cart).forEach(function (id) {
+            inputs.insertAdjacentHTML('beforeend',
+                '<input type="hidden" name="menuItemIds" value="' + id + '">' +
+                '<input type="hidden" name="quantities" value="' + cart[id].qty + '">');
+        });
+    });
+
+    render();
+})();
+</script>
 }

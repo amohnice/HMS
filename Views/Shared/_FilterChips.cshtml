@@ -1,0 +1,18 @@
+@*
+    Segmented filters with counts — All 78 · Dine in 04 · Wait List 03.
+    One page with chips beats four pages showing the same records.
+*@
+@model IEnumerable<HMS.Models.ViewModels.FilterChip>
+
+<div class="chip-row">
+    @foreach (var chip in Model)
+    {
+        <a class="chip @(chip.IsActive ? "is-active" : "")" href="@chip.Href">
+            @chip.Label
+            @if (chip.Count is not null)
+            {
+                <span class="chip-count">@chip.Count</span>
+            }
+        </a>
+    }
+</div>

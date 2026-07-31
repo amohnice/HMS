@@ -1,324 +1,408 @@
 @using HMS.Models.Shop
 @using HMS.Models
+@using HMS.Models.ViewModels
 @{
-    ViewData["Title"] = "Shop POS Cashier";
+    ViewData["Title"] = "Shop POS";
     var products = (List<ShopProduct>)ViewBag.Products;
+    var categories = products.Select(p => p.Category).Distinct().OrderBy(c => c).ToList();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <h1 class="h2 mb-0 fw-bold">Shop Point of Sale</h1>
-        <p class="text-muted mb-0">Search items, scan barcodes, and process retail checkouts</p>
-    </div>
-    <div id="connectionStatus">
-        <span class="badge bg-success py-1 px-3 fs-6">POS Terminal Online</span>
-    </div>
-</div>
+<partial name="_SurfaceHead" model="@(new SurfaceHead
+{
+    Title = "Shop Till",
+    Count = $"{products.Count} items"
+})" />
 
-<div class="pos-container">
-    <!-- Catalog and Search (Left) -->
-    <div>
-        <!-- Search and Barcode Bar -->
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body">
-                <div class="row g-2">
-                    <div class="col-sm-8 col-md-9">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                            </span>
-                            <input type="text" id="barcodeSearchInput" class="form-control border-start-0 ps-0" placeholder="Scan Barcode (e.g. 100001) or Type Product Name..." onkeypress="handleSearchKeyPress(event)" />
-                        </div>
-                    </div>
-                    <div class="col-sm-4 col-md-3">
-                        <button type="button" class="btn btn-secondary w-100" onclick="performBarcodeLookup()">Add to Cart</button>
-                    </div>
-                </div>
-                <div id="searchFeedback" class="text-danger small mt-1 d-none">Product not found or out of stock.</div>
-            </div>
+<div class="pos-layout">
+
+    @* ============ BROWSE ============ *@
+    <div class="pos-browse">
+
+        @* Barcode first: at a till the scanner is the primary input device. *@
+        <div class="scan-bar">
+            <span class="scan-bar-icon"><partial name="_Icon" model="@("search")" /></span>
+            <input type="text" id="scanInput" autocomplete="off" autofocus
+                   placeholder="Scan barcode or type a product name, then press Enter" />
+            <button type="button" class="btn btn-primary btn-sm" id="scanAdd">Add</button>
+        </div>
+        <div class="scan-feedback" id="scanFeedback" hidden></div>
+
+        <div class="chip-row" id="productFilters">
+            <button type="button" class="chip is-active" data-filter="all">
+                All
+                <span class="chip-count">@products.Count</span>
+            </button>
+            @foreach (var category in categories)
+            {
+                <button type="button" class="chip" data-filter="@category">
+                    @category
+                    <span class="chip-count">@products.Count(p => p.Category == category)</span>
+                </button>
+            }
         </div>
 
-        <!-- Quick Item Catalog -->
-        <h5 class="fw-bold mb-3 text-secondary">Quick Select Catalog</h5>
-        <div class="pos-menu-grid">
+        <div class="pos-menu-grid" id="productGrid">
             @foreach (var p in products)
             {
-                <div class="card menu-item-card" onclick="addToCart(@p.Id, '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(p.Name))', @p.Price, @p.StockQuantity)">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="badge bg-light text-secondary">@p.Category</span>
-                            <span class="small text-muted">Stock: <strong>@p.StockQuantity</strong></span>
-                        </div>
-                        <h6 class="fw-bold mb-1 text-truncate">@p.Name</h6>
-                        <span class="small text-muted d-block mb-2">Code: @p.Barcode</span>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-primary">Ksh @p.Price.ToString("N0")</span>
-                            <span class="btn btn-sm btn-primary icon-action-btn">+</span>
-                        </div>
+                <div class="dish-tile" data-dish="@p.Id" data-category="@p.Category"
+                     data-name="@p.Name" data-max="@p.StockQuantity"
+                     data-price="@p.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                    <div class="dish-tile-top">
+                        <span class="dish-tile-kind">@p.Category</span>
+                        <span class="dish-tile-stock">@p.StockQuantity left</span>
+                    </div>
+                    <span class="dish-tile-name">@p.Name</span>
+                    @if (!string.IsNullOrWhiteSpace(p.Barcode))
+                    {
+                        <span class="dish-tile-code">@p.Barcode</span>
+                    }
+
+                    <div class="dish-tile-foot">
+                        <span class="dish-tile-price">Ksh @p.Price.ToString("N0")</span>
+                        <span class="stepper">
+                            <button type="button" class="stepper-btn stepper-btn--sub" data-step="-1" aria-label="Remove one @p.Name">&minus;</button>
+                            <span class="stepper-value" data-qty>0</span>
+                            <button type="button" class="stepper-btn stepper-btn--add" data-step="1" aria-label="Add one @p.Name">+</button>
+                        </span>
                     </div>
                 </div>
             }
         </div>
+
+        @if (products.Count == 0)
+        {
+            <partial name="_EmptyState" model="@(new EmptyState
+            {
+                Icon = "box",
+                Title = "Nothing in stock to sell",
+                Text = "Add products, or restock existing ones, before taking sales."
+            })" />
+        }
     </div>
 
-    <!-- POS Cart Sidebar (Right) -->
-    <div class="pos-cart-panel shadow-sm">
-        <h5 class="fw-bold mb-3 border-bottom pb-2">Sales Cart</h5>
+    @* ============ CART RAIL ============ *@
+    <form class="cart-rail" id="checkoutForm" asp-action="Checkout" method="post">
+        @Html.AntiForgeryToken()
+        <div id="cartInputs"></div>
+        <input type="hidden" name="paymentMethod" id="paymentMethod" value="Cash" />
 
-        <form id="checkoutForm" asp-action="Checkout" method="post" onsubmit="prepareCheckoutForm(event)">
-            @Html.AntiForgeryToken()
-            <div id="checkoutHiddenInputs"></div>
-
-            <div class="pos-cart-items-header d-flex justify-content-between small fw-bold text-muted border-bottom pb-1 mb-2">
-                <span>Item</span>
-                <span>Qty/Price</span>
-            </div>
-
-            <!-- Items Container -->
-            <div class="pos-cart-items" id="cartContainer">
-                <div class="text-center text-muted py-5" id="emptyCartMessage">
-                    Cart is empty. Scan barcodes or select catalog items to compile cart.
+        <div class="cart-head">
+            <div class="cart-head-row">
+                <div>
+                    <h2 class="cart-head-title">Sale</h2>
+                    <span class="cart-head-meta" id="saleMeta">Walk-in</span>
+                </div>
+                <div class="cart-head-actions">
+                    <button type="button" class="cart-icon-btn cart-icon-btn--danger" id="cartClear" title="Clear sale">
+                        <partial name="_Icon" model="@("refresh")" />
+                    </button>
                 </div>
             </div>
+        </div>
 
-            <!-- Math and Settlement -->
-            <div class="border-top pt-3 mt-auto">
-                <div class="row g-2 mb-2">
-                    <div class="col-6">
-                        <label class="form-label small text-muted mb-0 fw-bold">Discount (Ksh)</label>
-                        <input name="discount" type="number" step="0.01" min="0" value="0" class="form-control form-control-sm" id="discountInput" oninput="calculateTotal()" />
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label small text-muted mb-0 fw-bold">Tax (Ksh)</label>
-                        <input name="tax" type="number" step="0.01" min="0" value="0" class="form-control form-control-sm" id="taxInput" oninput="calculateTotal()" />
-                    </div>
-                </div>
+        <hr class="cart-rule" />
 
-                <div class="mb-3">
-                    <label class="form-label small text-muted mb-0 fw-bold">Payment Method</label>
-                    <select name="paymentMethod" class="form-select form-select-sm" id="paymentMethodSelect">
-                        @foreach (PaymentMethod method in Enum.GetValues(typeof(PaymentMethod)))
-                        {
-                            <option value="@method">@method</option>
-                        }
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label small text-muted mb-0 fw-bold">Amount Tenders (Ksh)</label>
-                    <input name="amountPaid" type="number" step="0.01" class="form-control form-control-sm fw-bold fs-6 text-success" id="amountPaidInput" oninput="calculateTotal()" required />
-                </div>
-
-                <div class="bg-light p-2 rounded mb-3 small d-flex justify-content-between">
-                    <span class="text-muted">Subtotal:</span>
-                    <span id="subTotalText" class="fw-bold">Ksh 0.00</span>
-                </div>
-
-                <div class="bg-light p-2 rounded mb-3 small d-flex justify-content-between border-start border-3 border-primary">
-                    <div>
-                        <span class="text-muted small d-block">CHANGE DUE</span>
-                        <strong class="fs-5 text-dark" id="changeText">Ksh 0.00</strong>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary align-self-center py-0" onclick="exactPayment()">Exact Amount</button>
-                </div>
-
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="fw-bold fs-5">TOTAL PAYABLE:</span>
-                    <span class="fw-bold text-primary fs-4" id="totalPayableText">Ksh 0.00</span>
-                </div>
-
-                <button type="submit" class="btn btn-success w-100 btn-lg fw-bold" id="checkoutBtn" disabled>Process Checkout</button>
+        <div class="cart-items">
+            <div class="cart-section-head">
+                <span>Items</span>
+                <span class="cart-section-count" id="cartCount">00</span>
             </div>
-        </form>
-    </div>
+            <div id="cartLines">
+                <div class="cart-empty">Scan or tap an item.</div>
+            </div>
+        </div>
+
+        <hr class="cart-rule" />
+
+        <div class="cart-summary">
+            <div class="cart-summary-row">
+                <span>Subtotal</span>
+                <span id="subTotal">Ksh 0</span>
+            </div>
+
+            <div class="cart-summary-row cart-adjust">
+                <label for="discountInput">Discount</label>
+                <input name="discount" id="discountInput" type="number" step="0.01" min="0" value="0" />
+            </div>
+            <div class="cart-summary-row cart-adjust">
+                <label for="taxInput">Tax</label>
+                <input name="tax" id="taxInput" type="number" step="0.01" min="0" value="0" />
+            </div>
+
+            <div class="cart-summary-row cart-summary-row--total">
+                <span>Total Payable</span>
+                <span id="totalPayable">Ksh 0</span>
+            </div>
+
+            <div class="cart-summary-row cart-adjust">
+                <label for="amountPaidInput">Tendered</label>
+                <input name="amountPaid" id="amountPaidInput" type="number" step="0.01" required />
+            </div>
+            <div class="cart-summary-row cart-change" id="changeRow">
+                <span>Change due</span>
+                <span id="changeText">Ksh 0</span>
+            </div>
+        </div>
+
+        @* Payment method as a segmented row rather than a dropdown. *@
+        <div class="cart-methods" id="methodRow">
+            @foreach (var method in Enum.GetValues<PaymentMethod>())
+            {
+                <button type="button" class="cart-method @(method == PaymentMethod.Cash ? "is-active" : "")" data-method="@method">
+                    @method
+                </button>
+            }
+        </div>
+
+        <div class="cart-foot">
+            <button type="button" class="btn btn-secondary btn-sm" id="exactBtn">Exact</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="checkoutBtn" disabled>Checkout</button>
+        </div>
+    </form>
 </div>
 
 @section Scripts {
-    <script>
-        let cart = [];
+<script>
+(function () {
+    'use strict';
 
-        function handleSearchKeyPress(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                performBarcodeLookup();
-            }
+    var grid   = document.getElementById('productGrid');
+    var form   = document.getElementById('checkoutForm');
+    var lines  = document.getElementById('cartLines');
+    var inputs = document.getElementById('cartInputs');
+
+    var discountEl = document.getElementById('discountInput');
+    var taxEl      = document.getElementById('taxInput');
+    var paidEl     = document.getElementById('amountPaidInput');
+    var feedback   = document.getElementById('scanFeedback');
+
+    // qty by product id. Tiles own the editing; this is the projection.
+    var cart = {};
+    // True once the cashier types a tendered amount, so recalculation stops
+    // overwriting what they entered.
+    var paidTouched = false;
+
+    function money(n) {
+        return 'Ksh ' + n.toLocaleString('en-KE', { maximumFractionDigits: 0 });
+    }
+
+    function tileOf(id) { return grid.querySelector('[data-dish="' + id + '"]'); }
+
+    function say(message) {
+        if (!message) { feedback.hidden = true; return; }
+        feedback.textContent = message;
+        feedback.hidden = false;
+        clearTimeout(say._t);
+        say._t = setTimeout(function () { feedback.hidden = true; }, 3000);
+    }
+
+    function setQty(tile, wanted) {
+        if (!tile) return;
+        var id  = tile.getAttribute('data-dish');
+        var max = parseInt(tile.getAttribute('data-max'), 10);
+        var qty = wanted;
+
+        if (qty > max) {
+            qty = max;
+            say('Only ' + max + ' of ' + tile.getAttribute('data-name') + ' in stock.');
+        }
+        if (qty < 0) qty = 0;
+
+        if (qty === 0) {
+            delete cart[id];
+        } else {
+            cart[id] = {
+                name: tile.getAttribute('data-name'),
+                price: parseFloat(tile.getAttribute('data-price')),
+                qty: qty
+            };
         }
 
-        async function performBarcodeLookup() {
-            const input = document.getElementById('barcodeSearchInput');
-            const feedback = document.getElementById('searchFeedback');
-            const query = input.value.trim();
-            if (!query) return;
+        tile.querySelector('[data-qty]').textContent = qty;
+        tile.classList.toggle('is-selected', qty > 0);
+        render();
+    }
 
-            feedback.style.display = 'none';
+    function subtotalOf() {
+        return Object.keys(cart).reduce(function (sum, id) {
+            return sum + cart[id].price * cart[id].qty;
+        }, 0);
+    }
 
-            let url = `@Url.Action("SearchProduct", "ShopCashier")?`;
-            if (/^\d+$/.test(query)) {
-                url += `barcode=${query}`;
-            } else {
-                url += `term=${encodeURIComponent(query)}`;
-            }
+    function totalOf() {
+        var discount = parseFloat(discountEl.value) || 0;
+        var tax = parseFloat(taxEl.value) || 0;
+        return Math.max(0, subtotalOf() - discount + tax);
+    }
 
-            try {
-                const response = await fetch(url);
-                const result = await response.json();
-                
-                if (result.success) {
-                    addToCart(result.id, result.name, result.price, result.stockQuantity);
-                    input.value = '';
-                    input.focus();
+    function render() {
+        var ids = Object.keys(cart);
+
+        if (ids.length === 0) {
+            lines.innerHTML = '<div class="cart-empty">Scan or tap an item.</div>';
+        } else {
+            lines.innerHTML = '';
+            ids.forEach(function (id) {
+                var line = cart[id];
+                var row = document.createElement('div');
+                row.className = 'cart-line';
+                row.innerHTML =
+                    '<span class="cart-line-qty">' + line.qty + '&times;</span>' +
+                    '<span class="cart-line-name"></span>' +
+                    '<span class="cart-line-amount">' + money(line.price * line.qty) + '</span>' +
+                    '<button type="button" class="cart-line-drop" data-drop="' + id + '" aria-label="Remove">&times;</button>';
+                row.querySelector('.cart-line-name').textContent = line.name;
+                lines.appendChild(row);
+            });
+        }
+
+        document.getElementById('cartCount').textContent = ('0' + ids.length).slice(-2);
+        recalc();
+    }
+
+    function recalc() {
+        var total = totalOf();
+
+        document.getElementById('subTotal').textContent = money(subtotalOf());
+        document.getElementById('totalPayable').textContent = money(total);
+
+        // Prefill the tendered box until the cashier types their own figure.
+        if (!paidTouched) paidEl.value = total > 0 ? total.toFixed(2) : '';
+
+        var paid = parseFloat(paidEl.value) || 0;
+        var change = paid - total;
+        var row = document.getElementById('changeRow');
+        var short = change < 0;
+
+        document.getElementById('changeText').textContent = short ? 'Short ' + money(-change) : money(change);
+        row.classList.toggle('is-short', short);
+
+        document.getElementById('checkoutBtn').disabled = Object.keys(cart).length === 0 || short || total <= 0;
+    }
+
+    // --- Steppers ---
+    grid?.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-step]');
+        if (!btn) return;
+        var tile = btn.closest('[data-dish]');
+        var current = parseInt(tile.querySelector('[data-qty]').textContent, 10) || 0;
+        setQty(tile, current + parseInt(btn.getAttribute('data-step'), 10));
+    });
+
+    lines.addEventListener('click', function (e) {
+        var drop = e.target.closest('[data-drop]');
+        if (drop) setQty(tileOf(drop.getAttribute('data-drop')), 0);
+    });
+
+    // --- Category filter ---
+    document.getElementById('productFilters')?.addEventListener('click', function (e) {
+        var chip = e.target.closest('[data-filter]');
+        if (!chip) return;
+        var want = chip.getAttribute('data-filter');
+        this.querySelectorAll('[data-filter]').forEach(function (c) {
+            c.classList.toggle('is-active', c === chip);
+        });
+        grid.querySelectorAll('[data-dish]').forEach(function (tile) {
+            tile.hidden = want !== 'all' && tile.getAttribute('data-category') !== want;
+        });
+    });
+
+    // --- Barcode / name lookup ---
+    var scanInput = document.getElementById('scanInput');
+
+    function lookup() {
+        var query = scanInput.value.trim();
+        if (!query) return;
+
+        // A tile already on screen is the fast path — no round trip needed.
+        var local = grid.querySelector('[data-dish][data-name="' + query.replace(/"/g, '\\"') + '"]');
+        if (local) {
+            bump(local);
+            scanInput.value = '';
+            return;
+        }
+
+        var url = '@Url.Action("SearchProduct", "ShopCashier")?' +
+            (/^\d+$/.test(query) ? 'barcode=' + encodeURIComponent(query)
+                                 : 'term=' + encodeURIComponent(query));
+
+        fetch(url, { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                if (!result.success) { say('No product matches “' + query + '”.'); return; }
+                var tile = tileOf(result.id);
+                if (tile) {
+                    bump(tile);
                 } else {
-                    feedback.style.display = 'block';
+                    // In the catalogue but filtered out of view (e.g. inactive tile).
+                    say(result.name + ' is not on the quick grid — search the catalogue.');
                 }
-            } catch (err) {
-                console.error("Search failed:", err);
-                feedback.style.display = 'block';
+                scanInput.value = '';
+                scanInput.focus();
+            })
+            .catch(function () { say('Lookup failed. Check the connection and try again.'); });
+    }
+
+    function bump(tile) {
+        var current = parseInt(tile.querySelector('[data-qty]').textContent, 10) || 0;
+        setQty(tile, current + 1);
+    }
+
+    scanInput?.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); lookup(); }
+    });
+    document.getElementById('scanAdd')?.addEventListener('click', lookup);
+
+    // --- Money inputs ---
+    discountEl.addEventListener('input', function () { paidTouched = false; recalc(); });
+    taxEl.addEventListener('input', function () { paidTouched = false; recalc(); });
+    paidEl.addEventListener('input', function () { paidTouched = true; recalc(); });
+
+    document.getElementById('exactBtn')?.addEventListener('click', function () {
+        paidTouched = false;
+        recalc();
+        paidEl.focus();
+    });
+
+    // --- Payment method ---
+    document.getElementById('methodRow')?.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-method]');
+        if (!btn) return;
+        this.querySelectorAll('[data-method]').forEach(function (b) {
+            b.classList.toggle('is-active', b === btn);
+        });
+        document.getElementById('paymentMethod').value = btn.getAttribute('data-method');
+    });
+
+    // --- Clear ---
+    document.getElementById('cartClear')?.addEventListener('click', function () {
+        Object.keys(cart).forEach(function (id) {
+            var tile = tileOf(id);
+            if (tile) {
+                tile.querySelector('[data-qty]').textContent = '0';
+                tile.classList.remove('is-selected');
             }
-        }
+        });
+        cart = {};
+        discountEl.value = '0';
+        taxEl.value = '0';
+        paidTouched = false;
+        render();
+        scanInput?.focus();
+    });
 
-        function addToCart(id, name, price, stockQuantity) {
-            const existing = cart.find(item => item.id === id);
-            if (existing) {
-                if (existing.qty < stockQuantity) {
-                    existing.qty++;
-                } else {
-                    alert(`Cannot add more. Only ${stockQuantity} units available in stock.`);
-                }
-            } else {
-                cart.push({ id, name, price, stockQuantity, qty: 1 });
-            }
-            renderCart();
-        }
+    // --- Submit ---
+    form.addEventListener('submit', function (e) {
+        if (Object.keys(cart).length === 0) { e.preventDefault(); return; }
+        inputs.innerHTML = '';
+        Object.keys(cart).forEach(function (id) {
+            inputs.insertAdjacentHTML('beforeend',
+                '<input type="hidden" name="productIds" value="' + id + '">' +
+                '<input type="hidden" name="quantities" value="' + cart[id].qty + '">');
+        });
+    });
 
-        function changeQty(id, delta) {
-            const item = cart.find(item => item.id === id);
-            if (item) {
-                const newQty = item.qty + delta;
-                if (newQty > item.stockQuantity) {
-                    alert(`Cannot exceed available stock of ${item.stockQuantity} units.`);
-                    return;
-                }
-                item.qty = newQty;
-                if (item.qty <= 0) {
-                    cart = cart.filter(x => x.id !== id);
-                }
-                renderCart();
-            }
-        }
-
-        function renderCart() {
-            const container = document.getElementById('cartContainer');
-            const emptyMessage = document.getElementById('emptyCartMessage');
-            
-            if (cart.length === 0) {
-                container.innerHTML = `<div class="text-center text-muted py-5" id="emptyCartMessage">Cart is empty. Scan barcodes or select catalog items to compile cart.</div>`;
-                document.getElementById('checkoutBtn').disabled = true;
-                resetMath();
-                return;
-            }
-
-            container.innerHTML = '';
-            cart.forEach(item => {
-                const subtotal = item.price * item.qty;
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'pos-cart-item';
-                itemDiv.innerHTML = `
-                    <div class="cart-item-name">
-                        <div class="fw-bold text-truncate small">${item.name}</div>
-                        <div class="text-muted small">Ksh ${item.price.toFixed(2)}</div>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <button type="button" class="btn btn-sm btn-outline-secondary p-1 py-0 me-2" onclick="changeQty(${item.id}, -1)">-</button>
-                        <span class="fw-bold me-2 small cart-qty-pill">${item.qty}</span>
-                        <button type="button" class="btn btn-sm btn-outline-secondary p-1 py-0 me-2" onclick="changeQty(${item.id}, 1)">+</button>
-                        <span class="fw-bold text-primary small">Ksh ${subtotal.toFixed(2)}</span>
-                    </div>
-                `;
-                container.appendChild(itemDiv);
-            });
-
-            calculateTotal();
-        }
-
-        function calculateTotal() {
-            let subtotal = 0;
-            cart.forEach(item => {
-                subtotal += item.price * item.qty;
-            });
-
-            const discount = parseFloat(document.getElementById('discountInput').value) || 0;
-            const tax = parseFloat(document.getElementById('taxInput').value) || 0;
-            const total = subtotal - discount + tax;
-
-            document.getElementById('subTotalText').innerText = "Ksh " + subtotal.toFixed(2);
-            document.getElementById('totalPayableText').innerText = "Ksh " + total.toFixed(2);
-
-            const amtPaidInput = document.getElementById('amountPaidInput');
-            
-            // Auto preset paid amount if empty or lesser than total to guide the cashier
-            if (!amtPaidInput.value || parseFloat(amtPaidInput.value) < total) {
-                amtPaidInput.value = total.toFixed(2);
-            }
-
-            const paid = parseFloat(amtPaidInput.value) || 0;
-            const change = paid - total;
-            const changeText = document.getElementById('changeText');
-            const checkoutBtn = document.getElementById('checkoutBtn');
-
-            if (change >= 0) {
-                changeText.innerText = "Ksh " + change.toFixed(2);
-                changeText.classList.remove('text-danger');
-                changeText.classList.add('text-success');
-                checkoutBtn.disabled = false;
-            } else {
-                changeText.innerText = "Insufficient Amount";
-                changeText.classList.remove('text-success');
-                changeText.classList.add('text-danger');
-                checkoutBtn.disabled = true;
-            }
-        }
-
-        function exactPayment() {
-            let subtotal = 0;
-            cart.forEach(item => { subtotal += item.price * item.qty; });
-            const discount = parseFloat(document.getElementById('discountInput').value) || 0;
-            const tax = parseFloat(document.getElementById('taxInput').value) || 0;
-            const total = subtotal - discount + tax;
-
-            document.getElementById('amountPaidInput').value = total.toFixed(2);
-            calculateTotal();
-        }
-
-        function resetMath() {
-            document.getElementById('subTotalText').innerText = "Ksh 0.00";
-            document.getElementById('totalPayableText').innerText = "Ksh 0.00";
-            document.getElementById('amountPaidInput').value = "";
-            document.getElementById('changeText').innerText = "Ksh 0.00";
-            document.getElementById('discountInput').value = "0";
-            document.getElementById('taxInput').value = "0";
-        }
-
-        function prepareCheckoutForm(event) {
-            event.preventDefault();
-            const form = document.getElementById('checkoutForm');
-            const hiddenInputs = document.getElementById('checkoutHiddenInputs');
-            hiddenInputs.innerHTML = '';
-
-            cart.forEach(item => {
-                const idInput = document.createElement('input');
-                idInput.type = 'hidden';
-                idInput.name = 'productIds';
-                idInput.value = item.id;
-                hiddenInputs.appendChild(idInput);
-
-                const qtyInput = document.createElement('input');
-                qtyInput.type = 'hidden';
-                qtyInput.name = 'quantities';
-                qtyInput.value = item.qty;
-                hiddenInputs.appendChild(qtyInput);
-            });
-
-            form.submit();
-        }
-    </script>
+    render();
+})();
+</script>
 }

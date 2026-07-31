@@ -33,6 +33,20 @@ public class RestaurantOrderService : IRestaurantOrderService
         return await PagedList<RestaurantOrder>.CreateAsync(query, page, pageSize);
     }
 
+    public async Task<Dictionary<RestaurantOrderStatus, int>> GetStatusCountsAsync()
+    {
+        var counted = await _context.RestaurantOrders
+            .AsNoTracking()
+            .GroupBy(o => o.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count);
+
+        foreach (var status in Enum.GetValues<RestaurantOrderStatus>())
+            counted.TryAdd(status, 0);
+
+        return counted;
+    }
+
     public async Task<List<RestaurantOrder>> GetActiveKitchenOrdersAsync()
     {
         return await _context.RestaurantOrders

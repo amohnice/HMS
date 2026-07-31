@@ -1,0 +1,39 @@
+@*
+    The rail's phone form. Same manifest, first four entries plus Logout, so a
+    role's phone navigation can never drift from its desktop navigation.
+    An entry whose action is Create becomes the centre FAB — on a phone that is
+    the thing floor staff reach for.
+*@
+@model HMS.Models.ViewModels.ShellViewModel
+
+<nav class="dock">
+    @foreach (var item in Model.Items.Take(4))
+    {
+        var isFab = item.Action == "Create";
+        var badge = Model.BadgeFor(item);
+
+        <a class="dock-item @(isFab ? "dock-item--fab" : "") @(Model.IsActive(item) ? "is-active" : "")"
+           asp-controller="@item.Controller" asp-action="@item.Action">
+            @if (isFab)
+            {
+                <span class="dock-fab"><partial name="_Icon" model="@("plus")" /></span>
+            }
+            else
+            {
+                <span class="dock-icon">
+                    <partial name="_Icon" model="@item.Icon" />
+                    @if (badge is not null)
+                    {
+                        <span class="dock-badge">@badge</span>
+                    }
+                </span>
+            }
+            <span class="dock-label">@item.Label</span>
+        </a>
+    }
+
+    <a class="dock-item dock-item--danger" asp-controller="Account" asp-action="Logout">
+        <span class="dock-icon"><partial name="_Icon" model="@("logout")" /></span>
+        <span class="dock-label">Logout</span>
+    </a>
+</nav>

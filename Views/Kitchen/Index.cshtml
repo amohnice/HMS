@@ -1,130 +1,96 @@
 @model IEnumerable<HMS.Models.Restaurant.RestaurantOrder>
 @using HMS.Models
+@using HMS.Models.ViewModels
 @{
     ViewData["Title"] = "Kitchen Screen";
+
+    var orders = Model.ToList();
+
+    @* Next state for each card's single action — the board is one decision per ticket. *@
+    static (RestaurantOrderStatus? Next, string Label) Advance(RestaurantOrderStatus status) => status switch
+    {
+        RestaurantOrderStatus.Pending   => (RestaurantOrderStatus.Preparing, "Start Preparing"),
+        RestaurantOrderStatus.Preparing => (RestaurantOrderStatus.Ready, "Mark as Ready"),
+        RestaurantOrderStatus.Ready     => (RestaurantOrderStatus.Served, "Mark as Served"),
+        _                               => (null, "Awaiting cashier")
+    };
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-heading">Kitchen Display</h1>
-        <p class="page-subheading">Monitor and manage restaurant orders in real-time</p>
+@* Live counters and clock sit in the top bar — they used to be the KDS bar's job. *@
+@section TopBarTools {
+    <span class="kds-stat-chip pending">Pending <strong id="kdsPendingCount">—</strong></span>
+    <span class="kds-stat-chip preparing">Preparing <strong id="kdsPreparingCount">—</strong></span>
+    <span class="kds-stat-chip ready">Ready <strong id="kdsReadyCount">—</strong></span>
+    <span class="kds-clock" id="kdsClock"></span>
+}
+
+<div class="surface-head">
+    <h1 class="surface-title">Kitchen Display <span class="surface-count">(@orders.Count)</span></h1>
+    <div class="surface-head-actions">
+        <button class="btn btn-secondary btn-sm" type="button" onclick="location.reload()">Refresh</button>
     </div>
 </div>
 
-@if (!Model.Any())
+@if (orders.Count == 0)
 {
-    <div class="card border-0 py-5 text-center kitchen-empty-state">
-        <div class="card-body">
-            <svg class="mb-3 kitchen-empty-icon" width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-            <h4 class="fw-bold kitchen-empty-title">Kitchen caught up!</h4>
-            <p class="kitchen-empty-text">No active orders. New orders will appear here as waiters take them.</p>
-        </div>
-    </div>
+    <partial name="_EmptyState" model="@(new EmptyState
+    {
+        Icon = "chef",
+        Title = "Kitchen caught up",
+        Text = "New tickets appear here the moment waiters send them."
+    })" />
 }
 else
 {
-    <div class="row g-3">
-        @foreach (var order in Model)
+    <div class="ticket-grid">
+        @foreach (var order in orders)
         {
-            var statusStr = order.Status.ToString();
+            var state = order.Status.ToString().ToLower();
+            var advance = Advance(order.Status);
+            var elapsed = (int)(DateTime.Now - order.OrderTime).TotalMinutes;
 
-            var cardStyle = order.Status switch
-            {
-                RestaurantOrderStatus.Pending   => "border-left:4px solid #fbbf24;",
-                RestaurantOrderStatus.Preparing => "border-left:4px solid #38bdf8;",
-                RestaurantOrderStatus.Ready     => "border-left:4px solid #34d399;",
-                _                              => "border-left:4px solid #475569;"
-            };
+            <article class="ticket ticket--@state" data-kds-status="@order.Status">
+                <header class="ticket-head">
+                    <span class="ticket-id">#@order.Id.ToString("D4")</span>
+                    <span class="ticket-table">Table @order.Table.TableNumber</span>
+                    <span class="ticket-age">@(elapsed <= 0 ? "just now" : $"{elapsed}m")</span>
+                </header>
 
-            var headerAccent = order.Status switch
-            {
-                RestaurantOrderStatus.Pending   => "#fbbf24",
-                RestaurantOrderStatus.Preparing => "#38bdf8",
-                RestaurantOrderStatus.Ready     => "#34d399",
-                _                              => "#475569"
-            };
-
-            <div class="col-md-6 col-lg-4" data-kds-status="@statusStr">
-                <div class="h-100 rounded-3 p-0 overflow-hidden" style="background:#1e293b;border:1px solid #334155;@cardStyle">
-                    <!-- Card Header -->
-                    <div class="d-flex justify-content-between align-items-center px-3 py-2" style="background:rgba(255,255,255,0.04);border-bottom:1px solid #334155;">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fw-bold fs-5" style="color:#f8fafc;">#@order.Id</span>
-                            <span class="badge rounded-pill px-2 py-1" style="background:rgba(255,255,255,0.1);color:#94a3b8;font-size:0.7rem;">Table @order.Table.TableNumber</span>
-                            <span class="badge rounded-pill px-2 py-1" style="background:rgba(255,255,255,0.07);color:@headerAccent;font-size:0.68rem;">@statusStr</span>
-                        </div>
-                        <span style="font-size:0.75rem;color:#475569;">@((DateTime.Now - order.OrderTime).Minutes)m ago</span>
-                    </div>
-
-                    <!-- Card Body -->
-                    <div class="p-3 d-flex flex-column" style="gap:12px;">
-                        <!-- Staff row -->
-                        <div class="d-flex justify-content-between" style="font-size:0.78rem;color:#64748b;">
-                            <span>Waiter: <strong style="color:#94a3b8;">@order.Waiter.FullName</strong></span>
-                            <span>Cust: <strong style="color:#94a3b8;">@(string.IsNullOrWhiteSpace(order.CustomerName) ? "Guest" : order.CustomerName)</strong></span>
-                        </div>
-
-                        <!-- Item list -->
-                        <div style="border-top:1px solid #334155;border-bottom:1px solid #334155;padding:10px 0;">
-                            <ul class="list-unstyled mb-0" style="display:flex;flex-direction:column;gap:8px;">
-                                @foreach (var item in order.Items)
-                                {
-                                    <li class="d-flex justify-content-between align-items-center">
-                                        <span>
-                                            <strong style="font-size:1.1rem;color:@headerAccent;">@item.Quantity×</strong>
-                                            <span class="fw-semibold ms-1" style="color:#e2e8f0;">@item.MenuItem.Name</span>
-                                        </span>
-                                        <span style="font-size:0.72rem;color:#475569;background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:999px;">@item.MenuItem.Category</span>
-                                    </li>
-                                }
-                            </ul>
-                        </div>
-
-                        <!-- Chef notes -->
-                        @if (!string.IsNullOrWhiteSpace(order.Notes))
-                        {
-                            <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:8px 12px;font-size:0.8rem;color:#fca5a5;">
-                                <strong>Chef Notes:</strong> <em>@order.Notes</em>
-                            </div>
-                        }
-
-                        <!-- Action button -->
-                        <div>
-                            <form asp-action="UpdateStatus" method="post">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@order.Id" />
-                                @if (order.Status == RestaurantOrderStatus.Pending)
-                                {
-                                    <input type="hidden" name="status" value="@RestaurantOrderStatus.Preparing" />
-                                    <button type="submit" class="btn w-100 fw-bold py-2" style="background:#fbbf24;color:#0f172a;border:none;">
-                                        🔥 Start Preparing
-                                    </button>
-                                }
-                                else if (order.Status == RestaurantOrderStatus.Preparing)
-                                {
-                                    <input type="hidden" name="status" value="@RestaurantOrderStatus.Ready" />
-                                    <button type="submit" class="btn w-100 fw-bold py-2" style="background:#38bdf8;color:#0f172a;border:none;">
-                                        ✓ Mark as Ready
-                                    </button>
-                                }
-                                else if (order.Status == RestaurantOrderStatus.Ready)
-                                {
-                                    <input type="hidden" name="status" value="@RestaurantOrderStatus.Served" />
-                                    <button type="submit" class="btn w-100 fw-bold py-2" style="background:#34d399;color:#0f172a;border:none;">
-                                        🍽 Mark as Served
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button type="button" class="btn w-100" disabled style="background:rgba(255,255,255,0.05);color:#475569;border:1px solid #334155;">
-                                        ✓ Served – Awaiting Cashier
-                                    </button>
-                                }
-                            </form>
-                        </div>
-                    </div>
+                <div class="ticket-meta">
+                    <span>@order.Waiter.FullName</span>
+                    <span>@(string.IsNullOrWhiteSpace(order.CustomerName) ? "Guest" : order.CustomerName)</span>
                 </div>
-            </div>
+
+                <ul class="ticket-lines">
+                    @foreach (var item in order.Items)
+                    {
+                        <li>
+                            <span class="ticket-qty">@item.Quantity&times;</span>
+                            <span class="ticket-item">@item.MenuItem.Name</span>
+                            <span class="ticket-cat">@item.MenuItem.Category</span>
+                        </li>
+                    }
+                </ul>
+
+                @if (!string.IsNullOrWhiteSpace(order.Notes))
+                {
+                    <p class="ticket-note"><strong>Notes:</strong> @order.Notes</p>
+                }
+
+                <form class="ticket-action" asp-action="UpdateStatus" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@order.Id" />
+                    @if (advance.Next is not null)
+                    {
+                        <input type="hidden" name="status" value="@advance.Next" />
+                        <button type="submit" class="btn btn-primary w-100">@advance.Label</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-secondary w-100" disabled>@advance.Label</button>
+                    }
+                </form>
+            </article>
         }
     </div>
 }

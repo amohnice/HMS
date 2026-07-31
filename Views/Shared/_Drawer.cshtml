@@ -1,0 +1,22 @@
+@*
+    Right-side drawer, rendered once per page by the layout and filled on demand.
+
+    Any link marked data-drawer opens its target in here instead of navigating:
+        <a href="@Url.Action("Create")" data-drawer data-drawer-title="New dish">Add</a>
+
+    It fetches the ordinary Create/Edit page and lifts the content out of that
+    page's <main class="surface">, so it works with the existing full pages and
+    degrades to a normal navigation if JavaScript is off.
+*@
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-hidden="true">
+    <header class="drawer-head">
+        <h2 class="drawer-title" id="drawerTitle">Details</h2>
+        <button class="drawer-close" type="button" id="drawerClose" aria-label="Close">&times;</button>
+    </header>
+
+    <div class="drawer-body" id="drawerBody">
+        <div class="drawer-loading">Loading…</div>
+    </div>
+</aside>

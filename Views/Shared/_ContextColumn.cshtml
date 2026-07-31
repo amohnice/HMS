@@ -1,0 +1,42 @@
+@*
+    Zone 2 renderer. Render inside the layout's ContextColumn section:
+
+        @section ContextColumn { <partial name="_ContextColumn" model="myColumn" /> }
+
+    Counts live here rather than on stat cards — the number is in the thing you click.
+*@
+@model HMS.Models.ViewModels.ContextColumn
+
+<h2 class="context-title">@Model.Title</h2>
+
+<div class="context-list">
+    @foreach (var item in Model.Items)
+    {
+        <a class="context-item @(item.IsActive ? "is-active" : "")" href="@item.Href">
+            @if (item.Icon is not null)
+            {
+                <span class="context-item-icon"><partial name="_Icon" model="@item.Icon" /></span>
+            }
+            <span class="context-item-label">@item.Label</span>
+            @if (item.Count is not null)
+            {
+                <span class="context-count">@item.Count</span>
+            }
+        </a>
+    }
+</div>
+
+@if (Model.Foot is not null)
+{
+    <div class="context-foot">
+        <a class="@Model.Foot.Css w-100" href="@Model.Foot.Href"
+           @(Model.Foot.OpensDrawer ? "data-drawer" : null)
+           data-drawer-title="@Model.Foot.DrawerTitle">
+            @if (Model.Foot.Icon is not null)
+            {
+                <partial name="_Icon" model="@Model.Foot.Icon" />
+            }
+            @Model.Foot.Label
+        </a>
+    </div>
+}

@@ -17,13 +17,7 @@ public class RestaurantMenuService : IRestaurantMenuService
 
     public async Task<PagedList<RestaurantMenu>> GetPaginatedMenusAsync(int page, int pageSize, string? search = null, RestaurantMenuCategory? categoryFilter = null)
     {
-        var query = _context.RestaurantMenus.AsNoTracking().AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var searchLower = search.Trim().ToLower();
-            query = query.Where(m => m.Name.ToLower().Contains(searchLower) || m.Category.ToString().ToLower().Contains(searchLower));
-        }
+        var query = ApplySearch(_context.RestaurantMenus.AsNoTracking(), search);
 
         if (categoryFilter.HasValue)
         {
@@ -32,6 +26,30 @@ public class RestaurantMenuService : IRestaurantMenuService
 
         query = query.OrderBy(m => m.Category).ThenBy(m => m.Name);
         return await PagedList<RestaurantMenu>.CreateAsync(query, page, pageSize);
+    }
+
+    public async Task<Dictionary<RestaurantMenuCategory, int>> GetCategoryCountsAsync(string? search = null)
+    {
+        var counted = await ApplySearch(_context.RestaurantMenus.AsNoTracking(), search)
+            .GroupBy(m => m.Category)
+            .Select(g => new { Category = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Category, x => x.Count);
+
+        // Every category is listed even at zero, so the column does not reshuffle
+        // as items come and go.
+        foreach (var category in Enum.GetValues<RestaurantMenuCategory>())
+            counted.TryAdd(category, 0);
+
+        return counted;
+    }
+
+    private static IQueryable<RestaurantMenu> ApplySearch(IQueryable<RestaurantMenu> query, string? search)
+    {
+        if (string.IsNullOrWhiteSpace(search)) return query;
+
+        var searchLower = search.Trim().ToLower();
+        return query.Where(m => m.Name.ToLower().Contains(searchLower)
+                                || m.Category.ToString().ToLower().Contains(searchLower));
     }
 
     public async Task<List<RestaurantMenu>> GetAvailableMenuItemsAsync()

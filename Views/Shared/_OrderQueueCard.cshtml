@@ -1,0 +1,16 @@
+@* Inner content of a queue card, shared by its link and non-link forms. *@
+@model HMS.Models.Restaurant.RestaurantOrder
+@{
+    var mins = (int)(DateTime.Now - Model.OrderTime).TotalMinutes;
+    var ago = mins <= 0 ? "just now" : mins == 1 ? "1 min ago" : $"{mins} mins ago";
+}
+
+<span class="queue-card-row">
+    <strong>Order #@Model.Id.ToString("D4")</strong>
+    <span class="queue-card-table">Table @Model.Table?.TableNumber</span>
+</span>
+<span class="queue-card-items">Item: @Model.Items.Sum(i => i.Quantity)&times;</span>
+<span class="queue-card-row">
+    <span class="queue-card-time">@ago</span>
+    <span class="queue-card-state">@Model.Status</span>
+</span>

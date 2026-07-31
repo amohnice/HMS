@@ -1,0 +1,55 @@
+@*
+    Zone 1 of the shell. One rail for every role — contents come from
+    NavigationManifest, never from an if-chain in here.
+*@
+@model HMS.Models.ViewModels.ShellViewModel
+
+<aside class="rail" id="rail">
+    <div class="rail-brand">
+        <div class="rail-brand-mark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                      d="M4 8h16M4 8a8 8 0 0016 0M12 8v13"></path>
+            </svg>
+        </div>
+        <span class="rail-brand-name">HMS</span>
+    </div>
+
+    <nav class="rail-nav">
+        @foreach (var item in Model.Items)
+        {
+            if (item.GroupLabel is not null)
+            {
+                <div class="rail-group">@item.GroupLabel</div>
+            }
+
+            var badge = Model.BadgeFor(item);
+
+            <a class="rail-item @(Model.IsActive(item) ? "is-active" : "")"
+               asp-controller="@item.Controller" asp-action="@item.Action"
+               title="@item.Label">
+                <span class="rail-icon"><partial name="_Icon" model="@item.Icon" /></span>
+                <span class="rail-label">@item.Label</span>
+                @if (badge is not null)
+                {
+                    <span class="rail-badge">@badge</span>
+                }
+            </a>
+        }
+    </nav>
+
+    <div class="rail-foot">
+        <a class="rail-item rail-item--danger" asp-controller="Account" asp-action="Logout" title="Logout">
+            <span class="rail-icon"><partial name="_Icon" model="@("logout")" /></span>
+            <span class="rail-label">Logout</span>
+        </a>
+
+        <div class="rail-user">
+            <div class="rail-avatar">@Model.Initial</div>
+            <div class="rail-user-meta">
+                <span class="rail-user-name">@Model.UserName</span>
+                <span class="rail-user-role">@Model.Role</span>
+            </div>
+        </div>
+    </div>
+</aside>
