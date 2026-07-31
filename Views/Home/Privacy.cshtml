@@ -1,6 +1,15 @@
-﻿@{
+@using HMS.Models.ViewModels
+@{
     ViewData["Title"] = "Privacy Policy";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<partial name="_SurfaceHead" model="@(new SurfaceHead { Title = "Privacy Policy" })" />
+
+<div class="form-page">
+    <section class="form-card">
+        <p class="mb-0 text-muted">
+            This page is a placeholder. Replace it with the policy covering how staff and
+            customer data is handled in this deployment.
+        </p>
+    </section>
+</div>
