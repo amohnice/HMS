@@ -29,6 +29,12 @@ public class RestaurantOrderController : Controller
     public async Task<IActionResult> Index(RestaurantOrderStatus? statusFilter, int page = 1, int pageSize = 10)
     {
         ViewBag.StatusFilter = statusFilter;
+        ViewBag.StatusCounts = await _orderService.GetStatusCountsAsync();
+
+        // Live floor state for the queue strip — independent of the paged list below,
+        // so paging or filtering never hides what is happening right now.
+        ViewBag.LiveOrders = await _orderService.GetActiveKitchenOrdersAsync();
+
         var orders = await _orderService.GetPaginatedOrdersAsync(page, pageSize, statusFilter);
         return View(orders);
     }

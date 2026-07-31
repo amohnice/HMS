@@ -20,6 +20,7 @@ public class RestaurantMenuController : Controller
     {
         ViewBag.Search = search;
         ViewBag.CategoryFilter = category;
+        ViewBag.CategoryCounts = await _menuService.GetCategoryCountsAsync(search);
 
         var menus = await _menuService.GetPaginatedMenusAsync(page, pageSize, search, category);
         return View(menus);

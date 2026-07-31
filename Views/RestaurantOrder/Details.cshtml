@@ -1,120 +1,89 @@
 @model HMS.Models.Restaurant.RestaurantOrder
 @using HMS.Models
+@using HMS.Models.ViewModels
+@using HMS.Services.Ui
 @{
     ViewData["Title"] = "Order Details";
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-10 col-lg-8">
-        <div class="d-flex align-items-center mb-3">
-            <a asp-action="Index" class="btn btn-sm btn-secondary me-3">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            </a>
-            <h1 class="h3 mb-0 fw-bold">Order Details #@Model.Id</h1>
-        </div>
+<partial name="_SurfaceHead" model="@(new SurfaceHead
+{
+    Title = $"Order #{Model.Id:D4}",
+    Actions =
+    [
+        new SurfaceAction { Label = "All orders", Href = Url.Action("Index")!, Css = "btn btn-secondary btn-sm" }
+    ]
+})" />
 
-        <div class="card shadow-sm mb-4">
-            <div class="card-body p-4">
-                <div class="row g-3 border-bottom pb-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="text-muted small fw-bold">ORDER TIME</div>
-                        <div class="fs-6 fw-semibold">@Model.OrderTime.ToString("F")</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="text-muted small fw-bold">STATUS</div>
-                        <div>
-                            @{
-                                var statusClass = Model.Status switch
-                                {
-                                    RestaurantOrderStatus.Pending => "order-pending",
-                                    RestaurantOrderStatus.Preparing => "order-preparing",
-                                    RestaurantOrderStatus.Ready => "order-ready",
-                                    RestaurantOrderStatus.Served => "order-served",
-                                    RestaurantOrderStatus.Paid => "order-paid",
-                                    RestaurantOrderStatus.Cancelled => "order-cancelled",
-                                    _ => ""
-                                };
-                            }
-                            <span class="badge-status @statusClass fs-6 py-1 px-3">@Model.Status</span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="text-muted small fw-bold">TABLE</div>
-                        <div class="fs-6 fw-semibold">Table @Model.Table.TableNumber</div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="text-muted small fw-bold">WAITER</div>
-                        <div class="fs-6 fw-semibold">@Model.Waiter.FullName</div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="text-muted small fw-bold">CUSTOMER</div>
-                        <div class="fs-6 fw-semibold">@(string.IsNullOrWhiteSpace(Model.CustomerName) ? "Guest" : Model.CustomerName)</div>
-                    </div>
-                </div>
+<div class="detail-columns">
 
-                <h5 class="fw-bold mb-3">Order Items</h5>
-                <div class="table-responsive mb-4">
-                    <table class="table align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Menu Item</th>
-                                <th class="text-center">Price</th>
-                                <th class="text-center">Quantity</th>
-                                <th class="text-end">Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in Model.Items)
-                            {
-                                <tr>
-                                    <td>
-                                        <div class="fw-bold">@item.MenuItem.Name</div>
-                                        <span class="text-muted small">@item.MenuItem.Category</span>
-                                    </td>
-                                    <td class="text-center">Ksh @item.UnitPrice.ToString("N2")</td>
-                                    <td class="text-center">@item.Quantity</td>
-                                    <td class="text-end fw-bold text-primary">Ksh @item.LineTotal.ToString("N2")</td>
-                                </tr>
-                            }
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="3" class="text-end fw-bold fs-5">Total:</td>
-                                <td class="text-end fw-bold fs-5 text-primary">Ksh @Model.TotalAmount.ToString("N2")</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(Model.Notes))
-                {
-                    <div class="bg-light p-3 rounded mb-4">
-                        <div class="fw-bold text-secondary mb-1">Notes / Requests:</div>
-                        <div class="fst-italic text-dark">@Model.Notes</div>
-                    </div>
-                }
-
-                @if (Model.Status == RestaurantOrderStatus.Paid)
-                {
-                    <div class="border-top pt-4">
-                        <h6 class="fw-bold text-success mb-3">Payment Info</h6>
-                        <div class="row g-3">
-                            <div class="col-sm-4">
-                                <span class="text-muted small d-block">PAYMENT METHOD</span>
-                                <span class="fw-bold">@Model.PaymentMethod</span>
-                            </div>
-                            <div class="col-sm-4">
-                                <span class="text-muted small d-block">AMOUNT PAID</span>
-                                <span class="fw-bold">Ksh @Model.AmountPaid?.ToString("N2")</span>
-                            </div>
-                            <div class="col-sm-4">
-                                <span class="text-muted small d-block">CHANGE RETURNED</span>
-                                <span class="fw-bold text-muted">Ksh @Model.ChangeAmount?.ToString("N2")</span>
-                            </div>
-                        </div>
-                    </div>
-                }
+    <section class="card bill">
+        <header class="bill-head">
+            <div>
+                <h2 class="bill-title">Table @Model.Table.TableNumber</h2>
+                <span class="bill-meta">
+                    @(string.IsNullOrWhiteSpace(Model.CustomerName) ? "Guest" : Model.CustomerName)
+                    · served by @Model.Waiter.FullName
+                </span>
             </div>
+            <partial name="_StatusPill" model="StatusStyle.From(Model.Status)" />
+        </header>
+
+        <div class="bill-lines">
+            @foreach (var item in Model.Items)
+            {
+                <div class="bill-line">
+                    <span class="bill-line-qty">@item.Quantity&times;</span>
+                    <span class="bill-line-name">
+                        @item.MenuItem.Name
+                        <span class="bill-line-sub">@item.MenuItem.Category</span>
+                    </span>
+                    <span class="bill-line-unit">@@ Ksh @item.UnitPrice.ToString("N0")</span>
+                    <span class="bill-line-amount">Ksh @item.LineTotal.ToString("N0")</span>
+                </div>
+            }
         </div>
-    </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Notes))
+        {
+            <p class="bill-note"><strong>Notes:</strong> @Model.Notes</p>
+        }
+
+        <footer class="bill-total">
+            <span>Total</span>
+            <span>Ksh @Model.TotalAmount.ToString("N0")</span>
+        </footer>
+    </section>
+
+    <aside class="detail-side">
+        <section class="card">
+            <header class="dash-panel-head">
+                <h2 class="dash-panel-title">Order</h2>
+            </header>
+            <dl class="detail-facts">
+                <div><dt>Placed</dt><dd>@Model.OrderTime.ToString("dd MMM yyyy · HH:mm")</dd></div>
+                <div><dt>Table</dt><dd>@Model.Table.TableNumber</dd></div>
+                <div><dt>Waiter</dt><dd>@Model.Waiter.FullName</dd></div>
+                <div><dt>Items</dt><dd>@Model.Items.Sum(i => i.Quantity)</dd></div>
+            </dl>
+        </section>
+
+        @if (Model.Status == RestaurantOrderStatus.Paid)
+        {
+            <section class="card">
+                <header class="dash-panel-head">
+                    <h2 class="dash-panel-title">Payment</h2>
+                </header>
+                <dl class="detail-facts">
+                    <div><dt>Method</dt><dd>@Model.PaymentMethod</dd></div>
+                    <div><dt>Paid</dt><dd>Ksh @(Model.AmountPaid?.ToString("N0") ?? "—")</dd></div>
+                    <div><dt>Change</dt><dd>Ksh @(Model.ChangeAmount?.ToString("N0") ?? "—")</dd></div>
+                    @if (Model.PaidAt is not null)
+                    {
+                        <div><dt>Settled</dt><dd>@Model.PaidAt.Value.ToString("dd MMM · HH:mm")</dd></div>
+                    }
+                </dl>
+            </section>
+        }
+    </aside>
 </div>

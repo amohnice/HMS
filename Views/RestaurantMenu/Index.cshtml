@@ -1,90 +1,170 @@
 @model HMS.Models.Common.PagedList<HMS.Models.Restaurant.RestaurantMenu>
+@using HMS.Models
+@using HMS.Models.ViewModels
+@using HMS.Services.Ui
 @{
     ViewData["Title"] = "Restaurant Menu";
+
+    var search = ViewBag.Search as string;
+    var active = ViewBag.CategoryFilter as RestaurantMenuCategory?;
+    var counts = ViewBag.CategoryCounts as Dictionary<RestaurantMenuCategory, int> ?? [];
+
+    string CategoryUrl(RestaurantMenuCategory? category) => Url.Action("Index", new { search, category })!;
+
+    var column = new ContextColumn
+    {
+        Title = "Categories",
+        Items =
+        [
+            new ContextItem
+            {
+                Label = "All Items", Icon = "book",
+                Count = counts.Values.Sum(),
+                Href = CategoryUrl(null),
+                IsActive = active is null
+            }
+        ],
+        Foot = new SurfaceAction
+        {
+            Label = "Add Menu Item", Icon = "plus",
+            Href = Url.Action("Create")!,
+            Css = "btn btn-primary btn-sm w-100",
+            OpensDrawer = true, DrawerTitle = "New menu item"
+        }
+    };
+
+    foreach (var category in Enum.GetValues<RestaurantMenuCategory>())
+    {
+        column.Items.Add(new ContextItem
+        {
+            Label = category.ToString(),
+            Count = counts.TryGetValue(category, out var n) ? n : 0,
+            Href = CategoryUrl(category),
+            IsActive = active == category
+        });
+    }
+
+    var head = new SurfaceHead
+    {
+        Title = active?.ToString() ?? "All Dishes",
+        Count = Model.TotalCount.ToString(),
+        ShowViewToggle = Model.Items.Any(),
+        Search = new SurfaceSearch
+        {
+            Href = Url.Action("Index")!,
+            Value = search,
+            Placeholder = "Search dishes…",
+            Preserve = new() { ["category"] = active?.ToString() }
+        }
+    };
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h2 mb-0 fw-bold">Restaurant Menu</h1>
-        <p class="text-muted">Manage items available for ordering in the restaurant</p>
-    </div>
-    <div>
-        <a asp-action="Create" class="btn btn-primary d-inline-flex align-items-center">
-            <svg class="me-2" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            Add Menu Item
-        </a>
-    </div>
-</div>
+@section ContextColumn {
+    <partial name="_ContextColumn" model="column" />
+}
 
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="get" asp-action="Index" class="row g-3 align-items-center">
-            <div class="col-md-9 col-lg-10">
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0 text-muted">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </span>
-                    <input type="text" name="search" value="@ViewBag.Search" class="form-control border-start-0 ps-0" placeholder="Search menu items by name or category..." />
-                </div>
-            </div>
-            <div class="col-md-3 col-lg-2">
-                <button type="submit" class="btn btn-secondary w-100">Search</button>
-            </div>
-        </form>
-    </div>
-</div>
+<partial name="_SurfaceHead" model="head" />
 
 @if (!Model.Items.Any())
 {
-    <div class="text-center py-5">
-        <svg class="text-muted mb-3" width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V4a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
-        <h4>No menu items found</h4>
-        <p class="text-muted">Try refining your search or add a new menu item.</p>
-    </div>
+    <partial name="_EmptyState" model="@(new EmptyState
+    {
+        Icon = "book",
+        Title = string.IsNullOrWhiteSpace(search)
+            ? "No dishes in this category yet"
+            : $"Nothing matches “{search}”",
+        Text = "Add a dish, or pick another category from the left.",
+        Action = new SurfaceAction
+        {
+            Label = "Add Menu Item", Icon = "plus",
+            Href = Url.Action("Create")!,
+            OpensDrawer = true, DrawerTitle = "New menu item"
+        }
+    })" />
 }
 else
 {
-    var categories = Model.Items.GroupBy(m => m.Category);
-    foreach (var categoryGroup in categories)
-    {
-        <div class="mb-5">
-            <h3 class="fw-bold mb-3 text-secondary border-bottom pb-2">@categoryGroup.Key</h3>
-            <div class="row g-4">
-                @foreach (var item in categoryGroup)
+    <div data-view-host data-view="grid">
+
+        @* ---------------- GRID ---------------- *@
+        <div data-view-pane="grid">
+            <div class="card-grid">
+                @* Creation happens in place — the common case never leaves the page. *@
+                <a class="add-tile" href="@Url.Action("Create")" data-drawer data-drawer-title="New menu item">
+                    <span class="add-tile-mark"><partial name="_Icon" model="@("plus")" /></span>
+                    Add New Dish@(active is null ? "" : $" to {active}")
+                </a>
+
+                @foreach (var item in Model.Items)
                 {
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title fw-bold mb-0">@item.Name</h5>
-                                    <span class="fs-5 fw-bold text-primary">Ksh @item.Price.ToString("N0")</span>
-                                </div>
-                                <p class="card-text text-muted flex-grow-1">@(string.IsNullOrWhiteSpace(item.Description) ? "No description provided." : item.Description)</p>
-                                <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                                    <div>
-                                        @if (item.IsAvailable)
-                                        {
-                                            <span class="badge-status status-available">Available</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge-status status-occupied">Unavailable</span>
-                                        }
-                                    </div>
-                                    <div class="btn-group">
-                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary py-1">Edit</a>
-                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger py-1">Delete</a>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="entity-card">
+                        <div class="entity-card-top">
+                            <span class="entity-card-kind">@item.Category</span>
+                            <partial name="_StatusPill" model="StatusStyle.Availability(item.IsAvailable)" />
+                        </div>
+
+                        <div class="entity-card-title">@item.Name</div>
+                        <div class="entity-card-desc">
+                            @(string.IsNullOrWhiteSpace(item.Description) ? "No description provided." : item.Description)
+                        </div>
+
+                        <div class="entity-card-foot">
+                            <span class="entity-card-price">Ksh @item.Price.ToString("N0")</span>
+                            <span class="btn-group">
+                                <a class="btn btn-sm btn-outline-primary" href="@Url.Action("Edit", new { id = item.Id })"
+                                   data-drawer data-drawer-title="Edit @item.Name">Edit</a>
+                                <a class="btn btn-sm btn-outline-danger" href="@Url.Action("Delete", new { id = item.Id })"
+                                   data-drawer data-drawer-title="Delete @item.Name">Delete</a>
+                            </span>
                         </div>
                     </div>
                 }
             </div>
-        </div>
-    }
 
-    <div class="card shadow-sm mt-4">
-        <partial name="_Pagination" model="Model" />
+            <div class="card mt-3">
+                <partial name="_Pagination" model="Model" />
+            </div>
+        </div>
+
+        @* ---------------- LIST ---------------- *@
+        <div data-view-pane="list">
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover table-cards mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Name</th>
+                                <th>Category</th>
+                                <th class="text-end">Price</th>
+                                <th>Status</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr>
+                                    <td class="ps-4 fw-semibold">@item.Name</td>
+                                    <td data-label="Category">@item.Category</td>
+                                    <td data-label="Price" class="text-end">Ksh @item.Price.ToString("N0")</td>
+                                    <td data-label="Status">
+                                        <partial name="_StatusPill" model="StatusStyle.Availability(item.IsAvailable)" />
+                                    </td>
+                                    <td data-label="Actions" class="text-center">
+                                        <div class="btn-group">
+                                            <a class="btn btn-sm btn-outline-primary" href="@Url.Action("Edit", new { id = item.Id })"
+                                               data-drawer data-drawer-title="Edit @item.Name">Edit</a>
+                                            <a class="btn btn-sm btn-outline-danger" href="@Url.Action("Delete", new { id = item.Id })"
+                                               data-drawer data-drawer-title="Delete @item.Name">Delete</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <partial name="_Pagination" model="Model" />
+            </div>
+        </div>
     </div>
 }

@@ -7,6 +7,12 @@ namespace HMS.Services;
 public interface IRestaurantOrderService
 {
     Task<PagedList<RestaurantOrder>> GetPaginatedOrdersAsync(int page, int pageSize, RestaurantOrderStatus? statusFilter = null);
+
+    /// <summary>
+    /// Order count per status, for the filter chips. Includes statuses at zero so the
+    /// chip row keeps a stable order.
+    /// </summary>
+    Task<Dictionary<RestaurantOrderStatus, int>> GetStatusCountsAsync();
     Task<List<RestaurantOrder>> GetActiveKitchenOrdersAsync();
     Task<List<RestaurantOrder>> GetServedOrdersForCashierAsync();
     Task<RestaurantOrder?> GetOrderByIdAsync(int id);

@@ -1,58 +1,78 @@
 @model IEnumerable<HMS.Models.Restaurant.RestaurantOrder>
+@using HMS.Models.ViewModels
+@using HMS.Services.Ui
 @{
-    ViewData["Title"] = "Restaurant Cashier POS";
+    ViewData["Title"] = "Restaurant Cashier";
+
+    var orders = Model.ToList();
+    var due = orders.Sum(o => o.TotalAmount);
 }
 
-<div class="mb-4">
-    <h1 class="h2 mb-0 fw-bold">Restaurant Cashier</h1>
-    <p class="text-muted">Process payments, checkout tables, and print receipts</p>
-</div>
+<partial name="_SurfaceHead" model="@(new SurfaceHead
+{
+    Title = "Awaiting Payment",
+    Count = orders.Count.ToString()
+})" />
 
-<div class="card shadow-sm">
-    <div class="card-header bg-white">
-        <h5 class="mb-0 fw-bold">Orders Awaiting Payment</h5>
+@if (orders.Count == 0)
+{
+    <partial name="_EmptyState" model="@(new EmptyState
+    {
+        Icon = "card",
+        Title = "Everything is settled",
+        Text = "Served orders appear here the moment a waiter marks them served."
+    })" />
+}
+else
+{
+    <div class="kpi-strip">
+        <div class="kpi">
+            <span class="kpi-label">Tables to settle</span>
+            <span class="kpi-value">@orders.Count</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-label">Total due</span>
+            <span class="kpi-value">Ksh @due.ToString("N0")</span>
+        </div>
+        <div class="kpi">
+            <span class="kpi-label">Longest waiting</span>
+            <span class="kpi-value">@((int)(DateTime.Now - orders.Min(o => o.OrderTime)).TotalMinutes)m</span>
+        </div>
     </div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th class="ps-4">Order ID</th>
-                    <th>Table</th>
-                    <th>Customer Name</th>
-                    <th>Waiter</th>
-                    <th>Time Served</th>
-                    <th class="text-end">Amount Due</th>
-                    <th class="text-center">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (!Model.Any())
-                {
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover table-cards mb-0">
+                <thead>
                     <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">
-                            <svg class="mb-3 text-success" width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            <p class="mb-0">No orders awaiting payment. All served orders have been checked out.</p>
-                        </td>
+                        <th class="ps-4">Order</th>
+                        <th>Table</th>
+                        <th>Customer</th>
+                        <th>Waiter</th>
+                        <th>Ordered</th>
+                        <th>Status</th>
+                        <th class="text-end">Amount Due</th>
+                        <th class="text-center">Action</th>
                     </tr>
-                }
-                else
-                {
-                    foreach (var order in Model)
+                </thead>
+                <tbody>
+                    @foreach (var order in orders)
                     {
                         <tr>
-                            <td class="ps-4 fw-bold">#@order.Id</td>
-                            <td><span class="badge bg-secondary">Table @order.Table.TableNumber</span></td>
-                            <td>@(string.IsNullOrWhiteSpace(order.CustomerName) ? "Guest" : order.CustomerName)</td>
-                            <td>@order.Waiter.FullName</td>
-                            <td>@order.OrderTime.ToString("yyyy-MM-dd HH:mm")</td>
-                            <td class="text-end fw-bold text-primary">Ksh @order.TotalAmount.ToString("N2")</td>
-                            <td class="text-center">
-                                <a asp-action="Pay" asp-route-id="@order.Id" class="btn btn-sm btn-primary py-1 px-3">Process Payment</a>
+                            <td class="ps-4 fw-bold">#@order.Id.ToString("D4")</td>
+                            <td data-label="Table">Table @order.Table.TableNumber</td>
+                            <td data-label="Customer">@(string.IsNullOrWhiteSpace(order.CustomerName) ? "Guest" : order.CustomerName)</td>
+                            <td data-label="Waiter">@order.Waiter.FullName</td>
+                            <td data-label="Ordered">@order.OrderTime.ToString("dd MMM HH:mm")</td>
+                            <td data-label="Status"><partial name="_StatusPill" model="StatusStyle.From(order.Status)" /></td>
+                            <td data-label="Amount Due" class="text-end fw-bold">Ksh @order.TotalAmount.ToString("N0")</td>
+                            <td data-label="Action" class="text-center">
+                                <a class="btn btn-sm btn-primary" asp-action="Pay" asp-route-id="@order.Id">Take Payment</a>
                             </td>
                         </tr>
                     }
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
+}
