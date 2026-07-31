@@ -29,9 +29,9 @@
 
 @if (totalCount > 0)
 {
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 px-4 py-3 bg-light border-top">
-        <div class="text-muted small">
-            Showing <strong class="text-dark">@startItem</strong> to <strong class="text-dark">@endItem</strong> of <strong class="text-dark">@totalCount</strong> results
+    <div class="pagination-bar">
+        <div>
+            Showing <strong class="text-dark">@startItem</strong>&ndash;<strong class="text-dark">@endItem</strong> of <strong class="text-dark">@totalCount</strong>
         </div>
 
         @if (totalPages > 1)

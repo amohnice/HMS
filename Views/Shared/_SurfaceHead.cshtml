@@ -1,0 +1,59 @@
+@*
+    Title · count · search · actions on one row.
+    Replaces the heading + prose subtitle + separate full-width search card
+    that every list page used to repeat.
+*@
+@model HMS.Models.ViewModels.SurfaceHead
+
+<div class="surface-head">
+    <h1 class="surface-title">
+        @Model.Title
+        @if (Model.Count is not null)
+        {
+            <span class="surface-count">(@Model.Count)</span>
+        }
+    </h1>
+
+    @if (Model.Search is not null)
+    {
+        <form class="surface-search" method="get" action="@Model.Search.Href" role="search">
+            @foreach (var kv in Model.Search.Preserve)
+            {
+                <input type="hidden" name="@kv.Key" value="@kv.Value" />
+            }
+            <span class="surface-search-icon"><partial name="_Icon" model="@("search")" /></span>
+            <input type="search" name="@Model.Search.ParamName" value="@Model.Search.Value"
+                   placeholder="@Model.Search.Placeholder" autocomplete="off" />
+        </form>
+    }
+
+    @if (Model.Actions.Count > 0 || Model.ShowViewToggle)
+    {
+        <div class="surface-head-actions">
+            @if (Model.ShowViewToggle)
+            {
+                <div class="segmented">
+                    <button class="segmented-item is-active" type="button" data-view-set="grid" title="Grid view">
+                        <partial name="_Icon" model="@("grid")" />
+                    </button>
+                    <button class="segmented-item" type="button" data-view-set="list" title="List view">
+                        <partial name="_Icon" model="@("list")" />
+                    </button>
+                </div>
+            }
+
+            @foreach (var action in Model.Actions)
+            {
+                <a class="@action.Css" href="@action.Href"
+                   @(action.OpensDrawer ? "data-drawer" : null)
+                   data-drawer-title="@action.DrawerTitle">
+                    @if (action.Icon is not null)
+                    {
+                        <partial name="_Icon" model="@action.Icon" />
+                    }
+                    @action.Label
+                </a>
+            }
+        </div>
+    }
+</div>

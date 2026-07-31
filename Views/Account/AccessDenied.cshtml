@@ -1,4 +1,17 @@
-@{ ViewData["Title"] = "Access Denied"; }
-<h2>Access Denied</h2>
-<p>You do not have permission to view this page.</p>
-<a asp-controller="Home" asp-action="Index" class="btn btn-primary">Back to Dashboard</a>
+@using HMS.Models.ViewModels
+@{
+    ViewData["Title"] = "Access Denied";
+}
+
+<partial name="_EmptyState" model="@(new EmptyState
+{
+    Icon = "logout",
+    Title = "You do not have access to that page",
+    Text = "Your role does not cover this section. If it should, ask an administrator to review your account.",
+    Action = new SurfaceAction
+    {
+        Label = "Back to dashboard",
+        Href = Url.Action("Index", "Home")!,
+        Css = "btn btn-primary btn-sm"
+    }
+})" />

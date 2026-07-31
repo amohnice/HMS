@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using HMS.Data;
 using HMS.Models;
 using HMS.Services;
+using HMS.Services.Navigation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,11 @@ builder.Services.AddScoped<IShopProductService, ShopProductService>();
 builder.Services.AddScoped<IRestaurantOrderService, RestaurantOrderService>();
 builder.Services.AddScoped<IRestaurantMenuService, RestaurantMenuService>();
 builder.Services.AddScoped<IShopSaleService, ShopSaleService>();
+
+// Rail badge counts render on every page, so they are memory-cached for a few seconds.
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<INavBadgeService, NavBadgeService>();
+builder.Services.AddScoped<HMS.Services.Dashboard.IDashboardService, HMS.Services.Dashboard.DashboardService>();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>

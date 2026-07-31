@@ -1,4 +1,7 @@
 @using System.Security.Claims
+@using HMS.Models.ViewModels
+@using HMS.Services.Navigation
+@inject INavBadgeService BadgeService
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,584 +19,98 @@
 
 @if (User.Identity?.IsAuthenticated == true)
 {
-    var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
-    var act  = ViewContext.RouteData.Values["action"]?.ToString();
+    @*
+        ONE shell for every role. What differs between roles is the manifest in
+        Services/Navigation/NavigationManifest.cs — never the markup below.
+        Pages may optionally define two sections:
+          ContextColumn — categories / status queues / date presets (zone 2)
+          TopBarTools   — chips that belong beside the search (e.g. kitchen counters)
+    *@
     var role = User.FindFirstValue(ClaimTypes.Role) ?? "";
-    var userName = User.Identity?.Name ?? "User";
-    var userInitial = userName.Substring(0, 1).ToUpper();
-
-    bool isKitchen     = role == "Kitchen";
-    bool isCashier     = role == "Cashier";
-    bool isShopCashier = role == "ShopCashier";
-    bool isWaiter      = role == "Waiter";
-    bool isPosRole     = isCashier || isShopCashier;
-
-    @* ════════════════════════════════════════════════
-       MODE 1 — KDS (Kitchen Staff: fullscreen display)
-       ════════════════════════════════════════════════ *@
-    if (isKitchen)
+    var shell = new ShellViewModel
     {
-        <div class="app-shell kds-mode">
-            <header class="kds-topbar">
-                <div class="kds-brand">
-                    <div class="kds-brand-icon">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                    </div>
-                    <span>HMS Kitchen</span>
-                </div>
+        Role       = role,
+        UserName   = User.Identity?.Name ?? "User",
+        Controller = ViewContext.RouteData.Values["controller"]?.ToString(),
+        Action     = ViewContext.RouteData.Values["action"]?.ToString(),
+        Items      = NavigationManifest.For(role),
+        Badges     = await BadgeService.GetBadgesAsync(role)
+    };
 
-                <div class="kds-status-bar">
-                    <a asp-controller="Home" asp-action="Index" class="kds-action-btn" style="border-color:rgba(99,102,241,0.3);color:#a5b4fc;">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                        Home
-                    </a>
-                    <span class="kds-stat-chip pending">
-                        <span class="spinner-grow spinner-grow-sm" style="width:8px;height:8px;" role="status"></span>
-                        Pending <strong id="kdsPendingCount">—</strong>
-                    </span>
-                    <span class="kds-stat-chip preparing">
-                        Preparing <strong id="kdsPreparingCount">—</strong>
-                    </span>
-                    <span class="kds-stat-chip ready">
-                        Ready <strong id="kdsReadyCount">—</strong>
-                    </span>
-                </div>
+    <div class="shell @(shell.IsKds ? "shell--kds" : "")" id="shell">
 
-                <div class="kds-topbar-right">
-                    <span class="kds-clock" id="kdsClock"></span>
-                    <button class="kds-action-btn" onclick="location.reload()">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 16H18"></path></svg>
-                        Refresh
-                    </button>
-                    <a asp-controller="Account" asp-action="Logout" class="kds-action-btn" style="border-color:rgba(239,68,68,0.3);color:#f87171;">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        Logout
-                    </a>
-                </div>
-            </header>
+        <partial name="_Rail" model="shell" />
+        <div class="rail-overlay" id="railOverlay"></div>
 
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="app-alert app-alert-success mx-4 mt-2" id="successAlert">@TempData["SuccessMessage"] <button class="app-alert-close" onclick="this.parentElement.remove()">×</button></div>
-            }
-            @if (TempData["ErrorMessage"] != null)
-            {
-                <div class="app-alert app-alert-error mx-4 mt-2" id="errorAlert">@TempData["ErrorMessage"] <button class="app-alert-close" onclick="this.parentElement.remove()">×</button></div>
-            }
+        <div class="shell-main">
 
-            <main class="kds-content">
-                @RenderBody()
-            </main>
-
-            @* Kitchen Bottom Navigation Dock (mobile only) *@
-            <nav class="bottom-nav role-kitchen">
-                <div class="bottom-nav-inner">
-                    <a class="bottom-nav-item @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                        Home
-                    </a>
-                    <a class="bottom-nav-item @(ctrl == "Kitchen" ? "active" : "")" asp-controller="Kitchen" asp-action="Index">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"></path></svg>
-                        Kitchen
-                    </a>
-                    <a class="bottom-nav-item" asp-controller="Account" asp-action="Logout" style="color:#f87171 !important;">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        Logout
-                    </a>
-                </div>
-            </nav>
-        </div>
-    }
-
-    @* ════════════════════════════════════════════════
-       MODE 2 — POS SIDEBAR (Cashier & Shop Cashier on Desktop)
-       ════════════════════════════════════════════════ *@
-    else if (isPosRole)
-    {
-        <div class="app-shell pos-mode">
-            <!-- POS Sidebar (Desktop) -->
-            <aside class="sidebar pos-sidebar" id="posSidebar">
-                <div class="sidebar-brand">
-                    <div class="sidebar-brand-icon">
-                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                    </div>
-                    <span class="sidebar-brand-name">HMS</span>
-                </div>
-
-                <nav class="sidebar-nav">
-                    <a class="sidebar-nav-item @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
-                        <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                        <span>Dashboard</span>
-                    </a>
-
-                    @if (isCashier)
-                    {
-                        <a class="sidebar-nav-item @(ctrl == "RestaurantCashier" ? "active" : "")" asp-controller="RestaurantCashier" asp-action="Index">
-                            <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                            <span>POS Register</span>
-                        </a>
-                        <a class="sidebar-nav-item @(ctrl == "RestaurantReport" ? "active" : "")" asp-controller="RestaurantReport" asp-action="Index">
-                            <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                            <span>Daily Reports</span>
-                        </a>
-                    }
-                    @if (isShopCashier)
-                    {
-                        <a class="sidebar-nav-item @(ctrl == "ShopCashier" ? "active" : "")" asp-controller="ShopCashier" asp-action="Index">
-                            <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                            <span>Shop POS</span>
-                        </a>
-                        <a class="sidebar-nav-item @(ctrl == "ShopReport" ? "active" : "")" asp-controller="ShopReport" asp-action="Index">
-                            <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            <span>Sales Reports</span>
-                        </a>
-                    }
-                </nav>
-
-                <div class="sidebar-footer">
-                    <div class="sidebar-user">
-                        <div class="sidebar-avatar">@userInitial</div>
-                        <div class="sidebar-user-info">
-                            <span class="sidebar-user-name">@userName</span>
-                            <span class="sidebar-user-role">@role</span>
-                        </div>
-                    </div>
-                    <a asp-controller="Account" asp-action="Logout" class="sidebar-logout-btn" title="Logout">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                    </a>
-                </div>
-            </aside>
-
-            <!-- POS Top Bar (Mobile) -->
-            <header class="pos-topbar d-lg-none">
-                <div class="pos-topbar-brand">
-                    <div class="pos-topbar-brand-icon">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                    </div>
-                    <span>HMS</span>
-                </div>
-
-                <nav class="pos-nav-tabs">
-                    @if (isCashier)
-                    {
-                        <a class="pos-nav-tab @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                            Home
-                        </a>
-                        <a class="pos-nav-tab @(ctrl == "RestaurantCashier" ? "active" : "")" asp-controller="RestaurantCashier" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                            POS
-                        </a>
-                        <a class="pos-nav-tab @(ctrl == "RestaurantReport" ? "active" : "")" asp-controller="RestaurantReport" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                            Reports
-                        </a>
-                    }
-                    @if (isShopCashier)
-                    {
-                        <a class="pos-nav-tab @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                            Home
-                        </a>
-                        <a class="pos-nav-tab @(ctrl == "ShopCashier" ? "active" : "")" asp-controller="ShopCashier" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                            POS
-                        </a>
-                        <a class="pos-nav-tab @(ctrl == "ShopReport" ? "active" : "")" asp-controller="ShopReport" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            Reports
-                        </a>
-                    }
-                </nav>
-
-                <div class="pos-topbar-right">
-                    <a asp-controller="Account" asp-action="Logout" class="pos-logout-btn">
-                        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                    </a>
-                </div>
-            </header>
-
-            <!-- Desktop toggle button -->
-            <div class="mobile-page-toolbar d-none d-lg-block">
-                <button class="topbar-toggle" id="posSidebarToggle" title="Toggle menu">
-                    <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            <header class="topbar">
+                <button class="topbar-toggle" id="railToggle" type="button" aria-label="Toggle navigation">
+                    <partial name="_Icon" model="@("menu")" />
                 </button>
-            </div>
 
-            <div class="px-3 pt-2">
-                @if (TempData["SuccessMessage"] != null)
+                <form class="topbar-search" asp-controller="Home" asp-action="Search" method="get" role="search">
+                    <span class="topbar-search-icon"><partial name="_Icon" model="@("search")" /></span>
+                    <input type="search" name="q" placeholder="Search menu, orders and more" autocomplete="off"
+                           value="@(ViewContext.HttpContext.Request.Query["q"])" />
+                </form>
+
+                @if (IsSectionDefined("TopBarTools"))
                 {
-                    <div class="app-alert app-alert-success" id="successAlert">@TempData["SuccessMessage"] <button class="app-alert-close" onclick="this.parentElement.remove()">×</button></div>
+                    <div class="topbar-tools">
+                        @await RenderSectionAsync("TopBarTools", required: false)
+                    </div>
                 }
-                @if (TempData["ErrorMessage"] != null)
-                {
-                    <div class="app-alert app-alert-error" id="errorAlert">@TempData["ErrorMessage"] <button class="app-alert-close" onclick="this.parentElement.remove()">×</button></div>
-                }
-            </div>
 
-            <main class="pos-content">
-                @RenderBody()
-            </main>
+                <div class="topbar-right">
+                    <button class="topbar-icon-btn" type="button" aria-label="Notifications">
+                        <partial name="_Icon" model="@("bell")" />
+                    </button>
 
-            @* POS Bottom Navigation Dock (mobile only) *@
-            @if (isCashier)
-            {
-                <nav class="bottom-nav role-cashier">
-                    <div class="bottom-nav-inner">
-                        <a class="bottom-nav-item @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                            Home
-                        </a>
-                        <a class="bottom-nav-item @(ctrl == "RestaurantCashier" ? "active" : "")" asp-controller="RestaurantCashier" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                            POS
-                        </a>
-                        <a class="bottom-nav-item @(ctrl == "RestaurantReport" ? "active" : "")" asp-controller="RestaurantReport" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                            Reports
-                        </a>
-                        <a class="bottom-nav-item" asp-controller="Account" asp-action="Logout" style="color:#f87171 !important;">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                            Logout
-                        </a>
+                    <div class="topbar-user">
+                        <div class="topbar-avatar">@shell.Initial</div>
+                        <div class="topbar-user-meta">
+                            <span class="topbar-user-name">@shell.UserName</span>
+                            <span class="topbar-user-role">@shell.Role</span>
+                        </div>
                     </div>
-                </nav>
-            }
-            @if (isShopCashier)
-            {
-                <nav class="bottom-nav role-shopcashier">
-                    <div class="bottom-nav-inner">
-                        <a class="bottom-nav-item @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                            Home
-                        </a>
-                        <a class="bottom-nav-item @(ctrl == "ShopCashier" ? "active" : "")" asp-controller="ShopCashier" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                            POS
-                        </a>
-                        <a class="bottom-nav-item @(ctrl == "ShopReport" ? "active" : "")" asp-controller="ShopReport" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            Reports
-                        </a>
-                        <a class="bottom-nav-item" asp-controller="Account" asp-action="Logout" style="color:#f87171 !important;">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                            Logout
-                        </a>
-                    </div>
-                </nav>
-            }
-        </div>
-    }
-
-    @* ════════════════════════════════════════════════
-       MODE 2.5 — WAITER TOP BAR (Waiter on desktop)
-       ════════════════════════════════════════════════ *@
-    else if (isWaiter)
-    {
-        <div class="app-shell pos-mode waiter-mode">
-            <header class="pos-topbar" data-role="waiter">
-                <div class="pos-topbar-brand">
-                    <div class="pos-topbar-brand-icon">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                    </div>
-                    <span>HMS Waiter</span>
-                </div>
-
-                <nav class="pos-nav-tabs">
-                    <a class="pos-nav-tab @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                        Home
-                    </a>
-                    <a class="pos-nav-tab @(ctrl == "RestaurantTable" ? "active" : "")" asp-controller="RestaurantTable" asp-action="Index">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                        Tables
-                    </a>
-                    <a class="pos-nav-tab @(ctrl == "RestaurantOrder" && act == "Create" ? "active" : "")" asp-controller="RestaurantOrder" asp-action="Create">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        Take Order
-                    </a>
-                    <a class="pos-nav-tab @(ctrl == "RestaurantOrder" && act == "Index" ? "active" : "")" asp-controller="RestaurantOrder" asp-action="Index">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                        Orders
-                    </a>
-                </nav>
-
-                <div class="pos-topbar-right">
-                    <div class="pos-user-chip d-none d-sm-flex">
-                        <div class="pos-avatar">@userInitial</div>
-                        <span>@userName</span>
-                        <span class="badge bg-secondary ms-1" style="font-size:0.62rem;">@role</span>
-                    </div>
-                    <a asp-controller="Account" asp-action="Logout" class="pos-logout-btn">
-                        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        <span class="d-none d-sm-inline">Logout</span>
-                    </a>
                 </div>
             </header>
 
-            <div class="px-3 pt-2">
-                @if (TempData["SuccessMessage"] != null)
+            <div class="shell-body">
+                @if (IsSectionDefined("ContextColumn"))
                 {
-                    <div class="app-alert app-alert-success" id="successAlert">@TempData["SuccessMessage"] <button class="app-alert-close" onclick="this.parentElement.remove()">×</button></div>
-                }
-                @if (TempData["ErrorMessage"] != null)
-                {
-                    <div class="app-alert app-alert-error" id="errorAlert">@TempData["ErrorMessage"] <button class="app-alert-close" onclick="this.parentElement.remove()">×</button></div>
-                }
-            </div>
-
-            <main class="pos-content">
-                @RenderBody()
-            </main>
-
-            @* Waiter Bottom Navigation Dock (mobile only) *@
-            <nav class="bottom-nav role-waiter">
-                <div class="bottom-nav-inner">
-                    <a class="bottom-nav-item @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                        Home
-                    </a>
-                    <a class="bottom-nav-item @(ctrl == "RestaurantTable" ? "active" : "")" asp-controller="RestaurantTable" asp-action="Index">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                        Tables
-                    </a>
-                    <!-- Centre FAB -->
-                    <a class="bottom-nav-item primary-action @(ctrl == "RestaurantOrder" && act == "Create" ? "active" : "")"
-                       asp-controller="RestaurantOrder" asp-action="Create">
-                        <div class="bottom-nav-fab">
-                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        </div>
-                        Order
-                    </a>
-                    <a class="bottom-nav-item @(ctrl == "RestaurantOrder" && act == "Index" ? "active" : "")"
-                       asp-controller="RestaurantOrder" asp-action="Index">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                        Orders
-                    </a>
-                    <a class="bottom-nav-item" asp-controller="Account" asp-action="Logout" style="color:#f87171 !important;">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        Logout
-                    </a>
-                </div>
-            </nav>
-        </div>
-    }
-
-    @* ════════════════════════════════════════════════
-       MODE 3 & 4 — Waiter + Admin/Manager/SuperAdmin
-       ════════════════════════════════════════════════ *@
-    else
-    {
-        <div class="app-shell @(isWaiter ? "has-bottom-nav" : "")">
-
-            @if (!isWaiter)
-            {
-                <!-- Full Sidebar (Admin / Manager / SuperAdmin) -->
-                <aside class="sidebar" id="sidebar">
-                    <div class="sidebar-brand">
-                        <div class="sidebar-brand-icon">
-                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                        </div>
-                        <span class="sidebar-brand-name">HMS</span>
-                    </div>
-
-                    <nav class="sidebar-nav">
-                        <a class="sidebar-nav-item @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
-                            <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                            <span>Dashboard</span>
-                        </a>
-
-                        @if (User.IsInRole("SuperAdmin") || User.IsInRole("Admin") || User.IsInRole("Manager"))
-                        {
-                            <div class="sidebar-section-label">Restaurant</div>
-                            <a class="sidebar-nav-item @(ctrl == "RestaurantMenu" ? "active" : "")" asp-controller="RestaurantMenu" asp-action="Index">
-                                <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                                <span>Menu</span>
-                            </a>
-                            <a class="sidebar-nav-item @(ctrl == "RestaurantTable" ? "active" : "")" asp-controller="RestaurantTable" asp-action="Index">
-                                <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                                <span>Tables</span>
-                            </a>
-                            <a class="sidebar-nav-item @(ctrl == "RestaurantOrder" && act == "Create" ? "active" : "")" asp-controller="RestaurantOrder" asp-action="Create">
-                                <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                                <span>Take Order</span>
-                            </a>
-                            <a class="sidebar-nav-item @(ctrl == "RestaurantOrder" && act == "Index" ? "active" : "")" asp-controller="RestaurantOrder" asp-action="Index">
-                                <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                                <span>All Orders</span>
-                            </a>
-                            <a class="sidebar-nav-item @(ctrl == "Kitchen" ? "active" : "")" asp-controller="Kitchen" asp-action="Index">
-                                <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"></path></svg>
-                                <span>Kitchen</span>
-                            </a>
-                            <a class="sidebar-nav-item @(ctrl == "RestaurantCashier" ? "active" : "")" asp-controller="RestaurantCashier" asp-action="Index">
-                                <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                <span>Cashier</span>
-                            </a>
-                            <a class="sidebar-nav-item @(ctrl == "RestaurantReport" ? "active" : "")" asp-controller="RestaurantReport" asp-action="Index">
-                                <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                                <span>R. Reports</span>
-                            </a>
-
-                            <div class="sidebar-section-label">Shop</div>
-                            <a class="sidebar-nav-item @(ctrl == "ShopProduct" ? "active" : "")" asp-controller="ShopProduct" asp-action="Index">
-                                <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-                                <span>Products</span>
-                            </a>
-                            <a class="sidebar-nav-item @(ctrl == "ShopCashier" && act == "Index" ? "active" : "")" asp-controller="ShopCashier" asp-action="Index">
-                                <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                <span>Shop POS</span>
-                            </a>
-                            <a class="sidebar-nav-item @(ctrl == "ShopReport" ? "active" : "")" asp-controller="ShopReport" asp-action="Index">
-                                <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                <span>S. Reports</span>
-                            </a>
-                        }
-
-                        @if (User.IsInRole("SuperAdmin") || User.IsInRole("Admin"))
-                        {
-                            <div class="sidebar-section-label">System</div>
-                            <a class="sidebar-nav-item @(ctrl == "User" ? "active" : "")" asp-controller="User" asp-action="Index">
-                                <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                                <span>Staff & Users</span>
-                            </a>
-                        }
-                    </nav>
-
-                    <div class="sidebar-footer">
-                        <div class="sidebar-user">
-                            <div class="sidebar-avatar">@userInitial</div>
-                            <div class="sidebar-user-info">
-                                <span class="sidebar-user-name">@userName</span>
-                                <span class="sidebar-user-role">@role</span>
-                            </div>
-                        </div>
-                        <a asp-controller="Account" asp-action="Logout" class="sidebar-logout-btn" title="Logout">
-                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        </a>
-                    </div>
-                </aside>
-
-                <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-                <!-- Admin mobile bottom dock (CSS shows only on <=767px) -->
-                <div class="admin-mobile-dock">
-                    <a asp-controller="Home" asp-action="Index" class="admin-dock-item @(ctrl == "Home" ? "active" : "")">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                        Home
-                    </a>
-                    <a asp-controller="RestaurantOrder" asp-action="Index" class="admin-dock-item @(ctrl == "RestaurantOrder" ? "active" : "")">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                        Orders
-                    </a>
-                    <button class="admin-dock-item" id="sidebarToggle" title="Full Menu">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                        Menu
-                    </button>
-                    <a asp-controller="User" asp-action="Index" class="admin-dock-item @(ctrl == "User" ? "active" : "")">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                        Staff
-                    </a>
-                    <a asp-controller="Account" asp-action="Logout" class="admin-dock-item" style="color:#f87171 !important;">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        Logout
-                    </a>
-                </div>
-            }
-
-            <!-- Main Content Area -->
-            <div class="main-area">
-                @if (isWaiter)
-                {
-                    <!-- Waiter compact mini top bar -->
-                    <div class="mobile-page-toolbar">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="sidebar-brand-icon" style="width:28px;height:28px;border-radius:6px;background:var(--primary-gradient);">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                            </div>
-                            <span class="fw-bold" style="font-size:0.9rem;">HMS Waiter</span>
-                        </div>
-                        <span class="text-muted small fw-semibold">@userName</span>
-                    </div>
-                }
-                else
-                {
-                    <!-- Admin hamburger toggle for tablet/desktop (shown via CSS on non-lg) -->
-                    <div class="mobile-page-toolbar d-lg-none">
-                        <button class="topbar-toggle" id="sidebarToggleMobile" title="Toggle menu">
-                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                        </button>
-                    </div>
-                    <!-- Desktop sidebar toggle button -->
-                    <div class="mobile-page-toolbar d-none d-lg-block">
-                        <button class="topbar-toggle" id="sidebarToggleDesktop" title="Toggle menu">
-                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                        </button>
-                    </div>
+                    <aside class="context-col">
+                        @await RenderSectionAsync("ContextColumn", required: false)
+                    </aside>
                 }
 
-                <!-- Alert banners -->
-                <div class="alert-zone">
+                <main class="surface">
                     @if (TempData["SuccessMessage"] != null)
                     {
                         <div class="app-alert app-alert-success" id="successAlert">
-                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             @TempData["SuccessMessage"]
-                            <button class="app-alert-close" onclick="this.parentElement.remove()">×</button>
+                            <button class="app-alert-close" onclick="this.parentElement.remove()">&times;</button>
                         </div>
                     }
                     @if (TempData["ErrorMessage"] != null)
                     {
                         <div class="app-alert app-alert-error" id="errorAlert">
-                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             @TempData["ErrorMessage"]
-                            <button class="app-alert-close" onclick="this.parentElement.remove()">×</button>
+                            <button class="app-alert-close" onclick="this.parentElement.remove()">&times;</button>
                         </div>
                     }
-                </div>
 
-                <!-- Page Content -->
-                <main class="page-content">
                     @RenderBody()
                 </main>
-            </div><!-- end .main-area -->
+            </div>
+        </div>
 
-            @* Waiter Bottom Navigation Dock *@
-            @if (isWaiter)
-            {
-                <nav class="bottom-nav role-waiter">
-                    <div class="bottom-nav-inner">
-                        <a class="bottom-nav-item @(ctrl == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                            Home
-                        </a>
-                        <a class="bottom-nav-item @(ctrl == "RestaurantTable" ? "active" : "")" asp-controller="RestaurantTable" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                            Tables
-                        </a>
-                        <!-- Centre FAB -->
-                        <a class="bottom-nav-item primary-action @(ctrl == "RestaurantOrder" && act == "Create" ? "active" : "")"
-                           asp-controller="RestaurantOrder" asp-action="Create">
-                            <div class="bottom-nav-fab">
-                                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                            </div>
-                            Order
-                        </a>
-                        <a class="bottom-nav-item @(ctrl == "RestaurantOrder" && act == "Index" ? "active" : "")"
-                           asp-controller="RestaurantOrder" asp-action="Index">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                            Orders
-                        </a>
-                        <a class="bottom-nav-item" asp-controller="Account" asp-action="Logout" style="color:#f87171 !important;">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                            Logout
-                        </a>
-                    </div>
-                </nav>
-            }
-
-        </div><!-- end .app-shell -->
-    }
+        <partial name="_BottomDock" model="shell" />
+        <partial name="_Drawer" />
+    </div>
 }
 else
 {
@@ -605,61 +122,63 @@ else
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Sidebar toggles (Admin)
-        const sidebar   = document.getElementById('sidebar');
-        const overlay   = document.getElementById('sidebarOverlay');
-        const toggleBtn = document.getElementById('sidebarToggle');       // dock button
-        const toggleMob = document.getElementById('sidebarToggleMobile'); // top bar button
-        const toggleDesk = document.getElementById('sidebarToggleDesktop'); // desktop button
+    document.addEventListener('DOMContentLoaded', function () {
+        const shell   = document.getElementById('shell');
+        const toggle  = document.getElementById('railToggle');
+        const overlay = document.getElementById('railOverlay');
 
-        // POS Sidebar toggle
-        const posSidebar = document.getElementById('posSidebar');
-        const posSidebarToggle = document.getElementById('posSidebarToggle');
+        // One toggle, two behaviours: on wide screens it collapses the rail to
+        // icons; below 1024px the rail is already icons, so it swings out over
+        // the content instead.
+        const isTablet = () => window.matchMedia('(max-width: 1023.98px)').matches;
 
-        function toggleSidebar()  {
-            sidebar?.classList.toggle('collapsed');
+        function closeRail() {
+            shell?.classList.remove('is-rail-open');
+            overlay?.classList.remove('is-visible');
         }
 
-        function togglePosSidebar() {
-            posSidebar?.classList.toggle('collapsed');
-        }
+        toggle?.addEventListener('click', function () {
+            if (!shell) return;
+            if (isTablet()) {
+                const open = shell.classList.toggle('is-rail-open');
+                overlay?.classList.toggle('is-visible', open);
+            } else {
+                shell.classList.toggle('is-rail-collapsed');
+                try {
+                    localStorage.setItem('hms.rail.collapsed',
+                        shell.classList.contains('is-rail-collapsed') ? '1' : '0');
+                } catch (e) { /* private mode: the preference just will not persist */ }
+            }
+        });
 
-        function openSidebar()  {
-            sidebar?.classList.remove('collapsed');
-            overlay?.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-        function closeSidebar() {
-            sidebar?.classList.add('collapsed');
-            overlay?.classList.remove('active');
-            document.body.style.overflow = '';
-        }
+        overlay?.addEventListener('click', closeRail);
+        window.addEventListener('resize', function () { if (!isTablet()) closeRail(); });
 
-        if (toggleBtn) toggleBtn.addEventListener('click', openSidebar);
-        if (toggleMob) toggleMob.addEventListener('click', openSidebar);
-        if (toggleDesk) toggleDesk.addEventListener('click', toggleSidebar);
-        if (overlay)  overlay.addEventListener('click',   closeSidebar);
-        if (posSidebarToggle) posSidebarToggle.addEventListener('click', togglePosSidebar);
+        try {
+            if (localStorage.getItem('hms.rail.collapsed') === '1') shell?.classList.add('is-rail-collapsed');
+        } catch (e) { /* ignore */ }
 
         // Auto-dismiss alerts
-        setTimeout(() => {
+        setTimeout(function () {
             document.getElementById('successAlert')?.remove();
             document.getElementById('errorAlert')?.remove();
         }, 4000);
 
-        // KDS live clock
-        const kdsClockEl = document.getElementById('kdsClock');
-        if (kdsClockEl) {
-            const tick = () => kdsClockEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            tick(); setInterval(tick, 1000);
+        // Live clock, for pages that render one (kitchen display).
+        const clock = document.getElementById('kdsClock');
+        if (clock) {
+            const tick = function () {
+                clock.textContent = new Date().toLocaleTimeString([],
+                    { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            };
+            tick();
+            setInterval(tick, 1000);
         }
 
-        // KDS order counters (read from data attrs set by Kitchen/Index.cshtml)
-        ['Pending','Preparing','Ready'].forEach(status => {
-            const count = document.querySelectorAll(`[data-kds-status="${status}"]`).length;
+        // Kitchen counters read straight off the cards rendered on the page.
+        ['Pending', 'Preparing', 'Ready'].forEach(function (status) {
             const el = document.getElementById('kds' + status + 'Count');
-            if (el) el.textContent = count;
+            if (el) el.textContent = document.querySelectorAll('[data-kds-status="' + status + '"]').length;
         });
     });
 </script>
